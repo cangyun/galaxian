@@ -61,7 +61,7 @@ Galaxian.prototype = {
         this.render();
         this.bindEvent();
         this.randomMove();
-        //this.randomShoot();
+        this.randomShoot();
         this.randomLeave();
     },
     initSelf: function () {
@@ -214,6 +214,8 @@ Galaxian.prototype = {
                 } else if (obj.x >= this.self.x && obj.x <= this.self.x + this.self.width && obj.y >= this.self.y - this.self.height && obj.y <= this.self.y && this.self.isAlive) {
                     this.ctx.clearRect(obj.x, obj.y, obj.width, obj.height);
                     this.ctx.clearRect(this.self.x, this.self.y - this.self.height, this.self.width, this.self.height);
+                    this.life -= 1;
+                    this.checkEnd();
                     this.arrow[index] = null;
                     this.arrow = this.arrow.filter(item => item !== null);
                     this.explosion();
@@ -422,7 +424,7 @@ Galaxian.prototype = {
                 let temp = [];
                 arr.forEach(items => temp.push(items.filter(item => item.mode !== "leave")));
                 temp = temp.filter(item => item.length !== 0);
-                window.temp = temp;
+                //window.temp = temp;
                 if (temp.length === 0) {
                     return;
                 }
@@ -487,12 +489,20 @@ Galaxian.prototype = {
     },
     checkEnd: function (status) {
         //只在发生碰撞时发生
-        if (this.life === -1 && status === " crashed" && this.enemy.filter(item => item.length !== 0).length === 1) {
+        if (this.life < 0 && status === " crashed" && this.enemy.filter(item => item.length !== 0).length === 1) {
+            this.endAction("lose");
+        } else if (this.life >= 0 && this.enemy.filter(item => item.length !== 0).length === 0) {
+            this.endAction("win");
+        } else if (this.life < 0 && this.enemy.filter(item => item.length !== 0).length !== 0) {
             this.endAction("lose");
         }
     },
-    endAction: function () {
-
+    endAction: function (result) {
+        if (result === "win") {
+            alert("win");
+        } else {
+            alert("lose");
+        }
     },
     constructor: Galaxian
 };
@@ -523,32 +533,46 @@ function SpaceShip() {
         y: null,
         width: null,
         height: null,
-        prev: null
+        speed: null,
+        prev: null,
     }
 }
 
 SpaceShip.prototype = new DrawAble();
 
 function Enemy() {
-
+    this.type = null;
 }
 
 Enemy.prototype = new SpaceShip();
 
 function Self() {
-
+    this.explosion = function () {
+        
+    }
 }
 
 Self.prototype = new SpaceShip();
 
 function Entity() {
-
+    this.info = {
+        x: null,
+        y: null,
+        width: null,
+        height: null,
+        speed: null,
+        prev: null
+    }
 }
 
 Entity.prototype = new DrawAble();
 
 function Bullet() {
-
+    /*@type: 1 up
+             2 down
+             3 track
+     */
+    this.type = null;
 }
 
 Bullet.prototype = new Entity();
