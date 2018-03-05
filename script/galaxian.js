@@ -32,6 +32,7 @@ function Galaxian() {
             explosion3: explosion3,
         }
     })();
+    this.life = 3;
     this.ctx = this.canvas.main.getContext("2d");
 }
 
@@ -60,7 +61,8 @@ Galaxian.prototype = {
         this.render();
         this.bindEvent();
         this.randomMove();
-        this.randomShoot();
+        //this.randomShoot();
+        this.randomLeave();
     },
     initSelf: function () {
         this.self = {
@@ -90,6 +92,8 @@ Galaxian.prototype = {
                     height: 30,
                     isAlive: true,
                     mode: "fleet",
+                    col: i,
+                    index: j,
                 };
                 this.enemy[i][j].prev = {
                     x: this.enemy[i][j].x,
@@ -208,10 +212,8 @@ Galaxian.prototype = {
                     this.arrow = this.arrow.filter(item => item !== null);
                     return true;
                 } else if (obj.x >= this.self.x && obj.x <= this.self.x + this.self.width && obj.y >= this.self.y - this.self.height && obj.y <= this.self.y && this.self.isAlive) {
-                    this.clearEvent();
                     this.ctx.clearRect(obj.x, obj.y, obj.width, obj.height);
                     this.ctx.clearRect(this.self.x, this.self.y - this.self.height, this.self.width, this.self.height);
-                    this.self.isAlive = false;
                     this.arrow[index] = null;
                     this.arrow = this.arrow.filter(item => item !== null);
                     this.explosion();
@@ -221,6 +223,8 @@ Galaxian.prototype = {
         }
     },
     explosion: function () {
+        this.self.isAlive = false;
+        this.clearEvent();
         let that = this;
         this.ctx.clearRect(this.self.x, this.self.y - this.self.height, this.self.width, this.self.height);
         this.ctx.drawImage(
@@ -293,7 +297,7 @@ Galaxian.prototype = {
             if (that.keyMap[90]) {
                 if (!that.keyTimer.shootTimer) {
                     that.keyTimer.shootTimer = setInterval(function () {
-                        if (new Date() - that.arrowCooldown > 500) {
+                        if (new Date() - that.arrowCooldown > 500 && that.self.isAlive) {
                             that.arrow.push(
                                 {
                                     x: that.self.x + that.self.width / 2,
@@ -309,6 +313,10 @@ Galaxian.prototype = {
                         }
                     }, 20);
                 }
+            }
+            if (!that.self.isAlive && e.keyCode) {
+                that.initSelf();
+                that.render();
             }
         };
         document.onkeyup = function (e) {
@@ -334,14 +342,17 @@ Galaxian.prototype = {
         this.keyTimer.shootTimer = null;
         cancelAnimationFrame(this.keyTimer.rightTimer);
         this.keyTimer.rightTimer = null;
-        document.onkeydown = null;
-        document.onkeyup = null;
+        // clearInterval(this.moveTimer);
+        // clearInterval(this.shootTimer);
+        // clearInterval(this.leaveTimer);
+        //document.onkeydown = null;
+        //document.onkeyup = null;
     },
     loadImage: function () {
 
     },
     randomMove: function () {
-        let that = this, move_cycle = getRandom(1000) + 400, range = getRandom(10) + 1;
+        let that = this, move_cycle = getRandom(1000) + 400, range = getRandom(10) + 5;
         this.moveTimer = setInterval(function () {
             let direction = getRandom(2);
             direction === 1 ? direction = "left" : direction = "right";
@@ -361,9 +372,11 @@ Galaxian.prototype = {
         }
         for (let i = 0; i < this.enemy.length; i++) {
             for (let j = 0; j < this.enemy[i].length; j++) {
-                this.enemy[i][j].prev.x = this.enemy[i][j].x;
-                this.enemy[i][j].prev.y = this.enemy[i][j].y;
-                this.enemy[i][j].x += range;
+                if (this.enemy[i][j].mode === "fleet") {
+                    this.enemy[i][j].prev.x = this.enemy[i][j].x;
+                    this.enemy[i][j].prev.y = this.enemy[i][j].y;
+                    this.enemy[i][j].x += range;
+                }
             }
         }
         return true;
@@ -371,21 +384,25 @@ Galaxian.prototype = {
     randomShoot: function () {
         let that = this, shoot_cycle = getRandom(1000) + 1000;
         this.shootTimer = setInterval(function () {
-            let random_index = [],arr = that.enemy.filter(item => item.length !== 0);
-            for (let i = 0; i < getRandom(3) + 2; i++) {
-                random_index.push(getRandom(arr.length - 1));
-            }
-            for (let i = 0; i < random_index.length; i++) {
-                that.arrow.push(
-                    {
-                        x: that.enemy[random_index[i]][0].x + that.enemy[random_index[i]][0].width / 2,
-                        y: that.enemy[random_index[i]][0].y + that.enemy[random_index[i]][0].height + 15,
-                        width: 3,
-                        height: 15,
-                        direction: "down",
-                        color: "red",
+            if (that.self.isAlive) {
+                let random_index = [], arr = that.enemy.filter(item => item.length !== 0);
+                for (let i = 0; i < getRandom(3) + 2; i++) {
+                    random_index.push(getRandom(arr.length - 1));
+                }
+                for (let i = 0; i < random_index.length; i++) {
+                    if (arr[random_index[i]][0].mode === "fleet") {
+                        that.arrow.push(
+                            {
+                                x: arr[random_index[i]][0].x + arr[random_index[i]][0].width / 2,
+                                y: arr[random_index[i]][0].y + arr[random_index[i]][0].height + 15,
+                                width: 3,
+                                height: 15,
+                                direction: "down",
+                                color: "red",
+                            }
+                        );
                     }
-                );
+                }
             }
         }, shoot_cycle);
     },
@@ -397,13 +414,85 @@ Galaxian.prototype = {
         return true;
     },
     randomLeave: function () {
-        let that = this;leave_cycle = getRandom(5000) + 1000;
+        let that = this;
+        leave_cycle = getRandom(5000) + 5000;
         this.leaveTimer = setInterval(function () {
+            if (that.self.isAlive) {
+                let arr = that.enemy.filter(item => item.length !== 0), obj, path = [];
+                let temp = [];
+                arr.forEach(items => temp.push(items.filter(item => item.mode !== "leave")));
+                temp = temp.filter(item => item.length !== 0);
+                window.temp = temp;
+                if (temp.length === 0) {
+                    return;
+                }
 
-            for (let i = 0; i < 1; i += 0.1) {
-                getBezierPoint(i, );
+                let random = getRandom(2);
+                random === 1 ? obj = temp[0][temp[0].length - 1] : obj = temp[temp.length - 1][temp[temp.length - 1].length - 1];
+                let controlPoint = {
+                    x: random === 1 ? obj.x - 10 * obj.width : obj.x + 10 * obj.width,
+                    y: obj.y - 5 * obj.height,
+                };
+
+                for (let i = 0; i < 1; i += 0.01) {
+                    path.push(getBezierPoint(i, obj.x, obj.y, that.self.x + that.self.width / 2, that.self.y + that.self.height, controlPoint.x, controlPoint.y));
+                }
+                //window.path = path;
+                that.shipLeaveTimer = requestAnimationFrame(leave);
+                let n = 0;
+
+                function leave() {
+                    if (path[n]) {
+                        requestAnimationFrame(leave);
+                        obj.prev.x = obj.x;
+                        obj.prev.y = obj.y;
+                        obj.mode = "leave";
+                        obj.x = path[n].x;
+                        obj.y = path[n].y;
+                        n += 1;
+                        that.render();
+                        that.checkShip(obj);
+                    }
+                }
             }
         }, leave_cycle)
+    },
+    checkShip: function (obj) {
+        if (obj.x >= this.self.x && obj.x <= this.self.x + this.self.width && obj.y >= this.self.y - this.self.height && obj.y <= this.self.y && this.self.isAlive) {
+            this.ctx.clearRect(this.self.x, this.self.y - this.self.height, this.self.width, this.self.height);
+            this.ctx.clearRect(obj.x, obj.y, obj.width, obj.height);
+            this.life -= 1;
+            this.checkEnd("crashed");
+            for (let i = 0; i < this.enemy[obj.col].length; i++) {
+                if (this.enemy[obj.col][i].index === obj.index) {
+                    this.enemy[obj.col][i] = null;
+                    this.enemy[obj.col] = this.enemy[obj.col].filter(item => item !== null);
+                    break;
+                }
+            }
+            this.render();
+            this.explosion();
+        } else if (obj.y >= this.canvas.height) {
+            this.ctx.clearRect(obj.x, obj.y, obj.width, obj.height);
+            this.checkEnd();
+            for (let i = 0; i < this.enemy[obj.col].length; i++) {
+                if (this.enemy[obj.col][i].index === obj.index) {
+                    this.enemy[obj.col][i] = null;
+                    this.enemy[obj.col] = this.enemy[obj.col].filter(item => item !== null);
+                    break;
+                }
+            }
+            this.render();
+        }
+    },
+    checkEnd: function (status) {
+        //只在发生碰撞时发生
+        if (this.life === -1 && status === " crashed" && this.enemy.filter(item => item.length !== 0).length === 1) {
+            this.endAction("lose");
+        }
+    },
+    endAction: function () {
+
     },
     constructor: Galaxian
 };
