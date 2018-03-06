@@ -13,6 +13,8 @@ function Galaxian(canvas) {
     };
     this.cooldown = {
         shootCooldown: 0,
+        randomShootCooldown: 0,
+        randomLeaveCooldown: 0,
     };
     this.arrow = [];
     this.life -= 1;
@@ -114,7 +116,7 @@ Galaxian.prototype = {
                     y: startY + (opts.shipHeight * (template[i].length - j)) + (opts.shipMargin * (template[i].length - j)),
                     width: opts.shipWidth,
                     height: opts.shipHeight,
-                    speed: 2,
+                    speed: 1,
                     prev: {
                         x: null,
                         y: null
@@ -141,6 +143,7 @@ Galaxian.prototype = {
                 enemy[i][j] = enemyShip;
             }
         }
+        //this.completeAnimate = true;
         this.enemy = enemy;
         this._enemy = this.enemyToArray();
     },
@@ -169,14 +172,14 @@ Galaxian.prototype = {
                     let bullet = that.arrow[i];
                     if (bullet.type === 1) {
                         if (!that.checkArrow(bullet, 0, -bullet.info.speed)) {
-                            that.clearObj(bullet);
+                            //that.clearObj(bullet);
                             that.arrow[i].delete();
                         } else {
                             bullet.move(bullet, 0, -bullet.info.speed);
                         }
                     } else if (bullet.type === 2) {
                         if (!that.checkArrow(bullet, 0, bullet.info.speed)) {
-                            that.clearObj(bullet);
+                            //that.clearObj(bullet);
                             that.arrow[i].delete();
                         } else {
                             bullet.move(bullet, 0, bullet.info.speed);
@@ -192,7 +195,58 @@ Galaxian.prototype = {
         }
     },
     randomMove: function () {
+        let that = this, result = true;
 
+        this.timer.randomMove = requestAnimationFrame(move);
+        let direction = 1;
+
+        function move() {
+            //direction 1:left 2:right
+            if (checkAnimate()) {
+                if (direction === 1) {
+                    function getResult() {
+                        for (let i = 0; i < that._enemy.length; i++) {
+                            if (!that.checkBorder(that._enemy[i], -that._enemy[i].info.speed, 0)) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                    result = getResult();
+                    if (result) {
+                        that._enemy.forEach(item => item.move(item, -item.info.speed, 0));
+                    } else {
+                        that._enemy.forEach(item => item.move(item, item.info.speed, 0));
+                        direction = 2;
+                    }
+                } else {
+                    function getResult() {
+                        for (let i = 0; i < that._enemy.length; i++) {
+                            if (!that.checkBorder(that._enemy[i], that._enemy[i].info.speed, 0)) {
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                    result = getResult();
+                    if (result) {
+                        that._enemy.forEach(item => item.move(item, item.info.speed, 0));
+                    } else {
+                        that._enemy.forEach(item => item.move(item, -item.info.speed, 0));
+                        direction = 1;
+                    }
+                }
+            }
+            requestAnimationFrame(move);
+        }
+        function checkAnimate() {
+            for (let i = 0; i < that._enemy.length; i++) {
+                if (!that._enemy[i].completeAnimate) {
+                    return false;
+                }
+            }
+            return true;
+        }
     },
     randomShoot: function () {
 
@@ -243,7 +297,7 @@ Galaxian.prototype = {
 
                 function shoot(last) {
                     if (self.isAlive && event.keyMap[90]) {
-                        if (!last || new Date().valueOf() - that.cooldown.shootCooldown > 1000) {
+                        if (!last || new Date().valueOf() - that.cooldown.shootCooldown > 500) {
                             let bullet = new Bullet();
                             bullet.setInfo({
                                 x: Math.ceil(self.info.x + self.info.width / 2),
@@ -318,11 +372,17 @@ Galaxian.prototype = {
     checkEnd: function () {
 
     },
-    clearObj: function (obj) {
-
-    },
+    // clearObj: function (obj) {
+    //
+    // },
     crashed: function (obj, opts) {
-
+        if (obj instanceof Self) {
+            obj.isAlive = false;
+            obj.explosion();
+        } else if (obj instanceof Enemy) {
+            obj.delete();
+            this.enemy[opts.i] = this.enemy[opts.i].filter(item => item.isDelete !== true);
+        }
     },
     // sort: function (obj) {
     //     obj = obj.filter(item => item.isDelete !== true);
@@ -372,8 +432,8 @@ function DrawAble() {
         if (obj.info.color)
             ctx.fillStyle = obj.info.color;
         !!obj.info.image ? ctx.drawImage(
-            obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
-        ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
+                obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
+            ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
         ctx.restore();
     };
     this.move = function (obj, xOffset, yOffset) {
@@ -384,6 +444,12 @@ function DrawAble() {
         this.render(this.ctx, obj);
     };
     this.isDelete = false;
+    this.delete = function () {
+        this.ctx.clearRect(this.info.x, this.info.y, this.info.width, this.info.height);
+        this.isDelete = true;
+        this.info.x = -1000;
+        this.info.y = -1000;
+    }
 }
 
 function SpaceShip() {
@@ -406,8 +472,8 @@ function SpaceShip() {
     this.initAnimate = function (startX, startY, endX, endY, opts) {
         //@TODO 加入水平，垂直
         /*@param opts -> direction 1 up
-                         direction 2 down
-        */
+         direction 2 down
+         */
         let that = this;
         if (opts.direction === 1) {
             if (startX <= endX && startY >= endY) {
@@ -416,6 +482,8 @@ function SpaceShip() {
                 requestAnimationFrame(function () {
                     that.initAnimate(that.info.x, that.info.y, endX, endY, {direction: 1});
                 });
+            } else {
+                this.completeAnimate = true;
             }
         } else if (opts.direction === 2) {
             if (startX >= endX && startY <= endY) {
@@ -424,6 +492,8 @@ function SpaceShip() {
                 requestAnimationFrame(function () {
                     that.initAnimate(that.info.x, that.info.y, endX, endY, {direction: 2});
                 })
+            } else {
+                this.completeAnimate = true;
             }
         }
     }
@@ -439,7 +509,7 @@ function Enemy() {
     /*
      @Deprecated
      this.info.index = null;
-    */
+     */
 
     //@status {1 fleet} {2 leave}
     this.status = null;
@@ -507,17 +577,11 @@ Entity.prototype = new DrawAble();
 
 function Bullet() {
     /*@type: 1 up
-             2 down
-             3 track
+     2 down
+     3 track
      */
     this.type = null;
     this.info.color = null;
-    this.delete = function () {
-        this.ctx.clearRect(this.info.x, this.info.y, this.info.width, this.info.height);
-        this.isDelete = true;
-        this.info.x = -1000;
-        this.info.y = -1000;
-    }
 }
 
 Bullet.prototype = new Entity();
