@@ -12,12 +12,13 @@ function Galaxian(canvas) {
         randomLeave: null,
     };
     this.cooldown = {
+        selfShootCooldown: 0,
         shootCooldown: 0,
         randomShootCooldown: 0,
         randomLeaveCooldown: 0,
     };
     this.arrow = [];
-    this.life -= 1;
+    this.life = 3;
 }
 
 Galaxian.prototype = {
@@ -28,8 +29,8 @@ Galaxian.prototype = {
          */
         let arr = {};
         for (let i = 0; i < 4; i++) {
-            arr["explosion_" + i + 1] = new Image();
-            arr["explosion_" + i + 1].src = "images/explosion_" + (i + 1) + ".png";
+            arr["explosion" + (i + 1)] = new Image();
+            arr["explosion" + (i + 1)].src = "images/explosion_" + (i + 1) + ".png";
         }
         arr["enemy1"] = new Image();
         arr["enemy1"].src = "images/bee_small.png";
@@ -65,10 +66,10 @@ Galaxian.prototype = {
          * randomMove: 随机移动
          * randomLeave: 进攻
          */
-        this.loopArrow();
         this.randomShoot();
         this.randomMove();
         this.randomLeave();
+        this.loopArrow();
 
 
         //绑定事件
@@ -139,6 +140,7 @@ Galaxian.prototype = {
                 //速度将由type决定
                 //enemyShip.info.speed = enemyShip.type + 1;
                 enemyShip.setCtx(this.ctx);
+                enemyShip.status = 1;
                 enemyShip.initAnimate(enemyShip.info.x, enemyShip.info.y, enemyShip.info.x, endY - j * opts.shipHeight - j * opts.shipMargin, {direction: 2});
                 enemy[i][j] = enemyShip;
             }
@@ -146,6 +148,7 @@ Galaxian.prototype = {
         //this.completeAnimate = true;
         this.enemy = enemy;
         this._enemy = this.enemyToArray();
+        this.out_enemy = [];
     },
     enemyToArray: function () {
         let enemy = this.enemy, newArr = [];
@@ -177,14 +180,16 @@ Galaxian.prototype = {
                         } else {
                             bullet.move(bullet, 0, -bullet.info.speed);
                         }
-                    } else if (bullet.type === 2) {
+                    }
+                    if (bullet.type === 2) {
                         if (!that.checkArrow(bullet, 0, bullet.info.speed)) {
                             //that.clearObj(bullet);
                             that.arrow[i].delete();
                         } else {
                             bullet.move(bullet, 0, bullet.info.speed);
                         }
-                    } else if (bullet.type === 3) {
+                    }
+                    if (bullet.type === 3) {
 
                     }
                     bullet.render(that.ctx, bullet);
@@ -212,6 +217,7 @@ Galaxian.prototype = {
                         }
                         return true;
                     }
+
                     result = getResult();
                     if (result) {
                         that._enemy.forEach(item => item.move(item, -item.info.speed, 0));
@@ -228,6 +234,7 @@ Galaxian.prototype = {
                         }
                         return true;
                     }
+
                     result = getResult();
                     if (result) {
                         that._enemy.forEach(item => item.move(item, item.info.speed, 0));
@@ -239,20 +246,113 @@ Galaxian.prototype = {
             }
             requestAnimationFrame(move);
         }
+
         function checkAnimate() {
             for (let i = 0; i < that._enemy.length; i++) {
                 if (!that._enemy[i].completeAnimate) {
                     return false;
                 }
             }
+            that.isAnimateComplete = true;
             return true;
         }
     },
     randomShoot: function () {
+        let that = this, shoot_cycle = getRandom(1000) + 500;
 
+        this.timer.randomShoot = setInterval(function () {
+            if (new Date().valueOf() - that.cooldown.selfShootCooldown > shoot_cycle && that.self.isAlive && that.isAnimateComplete) {
+                let random_index = [], arr = that.enemy.filter(item => item.length !== 0);
+
+                for (let i = 0; i < getRandom(3) + 2; i++) {
+                    random_index.push(getRandom(arr.length - 1));
+                }
+                for (let i = 0; i < random_index.length; i++) {
+                    let bullet = new Bullet();
+                    bullet.setInfo({
+                        x: Math.ceil(arr[random_index[i]][0].info.x + arr[random_index[i]][0].info.width / 2),
+                        y: null,
+                        width: 3,
+                        height: 15,
+                        speed: 4,
+                        prev: {
+                            x: null,
+                            y: null,
+                        }
+                    });
+                    bullet.info.y = arr[random_index[i]][0].info.y + arr[random_index[i]][0].info.height + bullet.info.height;
+                    bullet.info.color = "red";
+                    bullet.info.prev.x = bullet.info.x;
+                    bullet.info.prev.y = bullet.info.y;
+                    bullet.type = 2;
+                    bullet.setCtx(that.ctx);
+
+                    that.arrow.push(bullet);
+                    that.cooldown.shootCooldown = new Date().valueOf();
+                }
+            }
+        }, shoot_cycle);
     },
     randomLeave: function () {
+        //@TODO 需要优化!!!
+        let that = this, leave_cycle = getRandom(5000) + 7000, enemy = that.enemy;
+        this.timer.randomLeave = setInterval(function () {
+            if (that.self.isAlive) {
+                let obj, random = getRandom(2), path = [];
+                //enemy = enemy.filter(item => item.length !== 0);
+                if (random === 1) {
+                    let temp = enemy.filter(item => item.length !== 0);
+                    obj = temp[0][temp[0].length - 1];
+                    temp[0][temp[0].length - 1].status = 2;
 
+                    enemy[0][enemy[0].length - 1] = null;
+                    enemy[0] = enemy[0].filter(item => item !== null);
+                    that._enemy = that._enemy.filter(item => item.status !== 2);
+                    that.out_enemy.push(obj);
+                    for (let i = 0; i < 1; i += 0.01) {
+                        path.push(getBezierPoint(i, obj.info.x, obj.info.y, that.self.info.x, that.canvas.height + 20, obj.info.x - obj.info.width * 5, obj.info.y + obj.info.height));
+                    }
+                    let n = 0;
+                    leave();
+                    function leave() {
+                        if (path[n]) {
+                            if (that.checkBorder(obj,path[n].x - obj.info.x, path[n].y - obj.info.y)) {
+                                obj.move(obj,path[n].x - obj.info.x, path[n].y - obj.info.y);
+                                n++;
+                                requestAnimationFrame(leave);
+                            } else {
+                                that.crashed(obj);
+                            }
+                        }
+                    }
+                } else {
+                    let temp = enemy.filter(item => item.length !== 0);
+                    obj = temp[temp.length - 1][temp[temp.length - 1].length - 1];
+                    temp[temp.length - 1][temp[temp.length - 1].length - 1].status = 2;
+
+                    enemy[enemy.length - 1][enemy[enemy.length - 1].length - 1] = null;
+                    enemy[enemy.length - 1] = enemy[enemy.length - 1].filter(item => item !== null);
+                    that._enemy = that._enemy.filter(item => item.status !== 2);
+                    that.out_enemy.push(obj);
+                    for (let i = 0; i < 1; i += 0.01) {
+                        path.push(getBezierPoint(i, obj.info.x, obj.info.y, that.self.info.x, that.canvas.height + 20, obj.info.x + obj.info.width * 5, obj.info.y + obj.info.height));
+                    }
+                    let n = 0;
+                    leave();
+                    function leave() {
+                        if (path[n]) {
+                            if (that.checkBorder(obj,path[n].x - obj.info.x, path[n].y - obj.info.y)) {
+                                obj.move(obj,path[n].x - obj.info.x, path[n].y - obj.info.y);
+                                n++;
+                                requestAnimationFrame(leave);
+                            } else {
+                                that.crashed(obj);
+                            }
+                        }
+                    }
+                }
+            }
+        }, leave_cycle);
     },
     bindEvent: function () {
         this.event = new Event();
@@ -264,66 +364,67 @@ Galaxian.prototype = {
         if (e.keyCode in event.keyMap) {
             event.keyMap[e.keyCode] = true;
         }
+        if (this.isAnimateComplete) {
+            if (event.keyMap[37]) {
+                if (!event.timer.selfLeft) {
+                    event.timer.selfLeft = requestAnimationFrame(left);
 
-        if (event.keyMap[37]) {
-            if (!event.timer.selfLeft) {
-                event.timer.selfLeft = requestAnimationFrame(left);
-
-                function left() {
-                    if (that.checkBorder(self, -self.info.speed, 0) && self.isAlive && event.keyMap[37]) {
-                        self.move(self, -self.info.speed, 0);
-                        self.render(self.ctx, self);
-                        requestAnimationFrame(left);
-                    }
-                }
-            }
-        }
-        if (event.keyMap[39]) {
-            if (!event.timer.selfRight) {
-                event.timer.selfRight = requestAnimationFrame(right);
-
-                function right() {
-                    if (that.checkBorder(self, self.info.speed, 0) && self.isAlive && event.keyMap[39]) {
-                        self.move(self, self.info.speed, 0);
-                        self.render(self.ctx, self);
-                        requestAnimationFrame(right);
-                    }
-                }
-            }
-        }
-        if (event.keyMap[90]) {
-            if (!event.timer.selfShoot) {
-                event.timer.selfShoot = requestAnimationFrame(shoot);
-
-                function shoot(last) {
-                    if (self.isAlive && event.keyMap[90]) {
-                        if (!last || new Date().valueOf() - that.cooldown.shootCooldown > 500) {
-                            let bullet = new Bullet();
-                            bullet.setInfo({
-                                x: Math.ceil(self.info.x + self.info.width / 2),
-                                y: null,
-                                width: 3,
-                                height: 15,
-                                speed: 5,
-                                prev: {
-                                    x: null,
-                                    y: null,
-                                }
-                            });
-                            //-5是用来进行偏移的
-                            bullet.info.y = self.info.y - bullet.info.height - 10;
-                            bullet.info.color = "white";
-                            bullet.info.prev.x = bullet.info.x;
-                            bullet.info.prev.y = bullet.info.y;
-                            bullet.type = 1;
-                            bullet.setCtx(that.ctx);
-
-                            that.arrow.push(bullet);
-                            that.cooldown.shootCooldown = new Date().valueOf();
-                            requestAnimationFrame(shoot);
+                    function left() {
+                        if (that.checkBorder(self, -self.info.speed, 0) && self.isAlive && event.keyMap[37]) {
+                            self.move(self, -self.info.speed, 0);
+                            self.render(self.ctx, self);
+                            requestAnimationFrame(left);
                         }
                     }
                 }
+            }
+            if (event.keyMap[39]) {
+                if (!event.timer.selfRight) {
+                    event.timer.selfRight = requestAnimationFrame(right);
+
+                    function right() {
+                        if (that.checkBorder(self, self.info.speed, 0) && self.isAlive && event.keyMap[39]) {
+                            self.move(self, self.info.speed, 0);
+                            self.render(self.ctx, self);
+                            requestAnimationFrame(right);
+                        }
+                    }
+                }
+            }
+            if (event.keyMap[90]) {
+                if (!event.timer.selfShoot) {
+                    event.timer.selfShoot = setInterval(function () {
+                        if (self.isAlive && event.keyMap[90]) {
+                            if (new Date().valueOf() - that.cooldown.shootCooldown > 1) {
+                                let bullet = new Bullet();
+                                bullet.setInfo({
+                                    x: Math.ceil(self.info.x + self.info.width / 2),
+                                    y: null,
+                                    width: 3,
+                                    height: 15,
+                                    speed: 5,
+                                    prev: {
+                                        x: null,
+                                        y: null,
+                                    }
+                                });
+                                //-5是用来进行偏移的
+                                bullet.info.y = self.info.y - bullet.info.height - 10;
+                                bullet.info.color = "white";
+                                bullet.info.prev.x = bullet.info.x;
+                                bullet.info.prev.y = bullet.info.y;
+                                bullet.type = 1;
+                                bullet.setCtx(that.ctx);
+
+                                that.arrow.push(bullet);
+                                that.cooldown.shootCooldown = new Date().valueOf();
+                            }
+                        }
+                    }, 1000 / 60);
+                }
+            }
+            if (!self.isAlive && e.keyCode && this.life >= 0) {
+                this.initSelf();
             }
         }
     },
@@ -367,7 +468,17 @@ Galaxian.prototype = {
                 }
             }
         }
+        for (let i = 0; i < this.out_enemy.length; i++) {
+            let enemy = this.out_enemy[i];
+            if (obj.info.x >= enemy.info.x && obj.info.x <= enemy.info.x + enemy.info.width && obj.info.y >= enemy.info.y && obj.info.y <= enemy.info.y + enemy.info.height) {
+                this.crashed(enemy);
+                return false;
+            }
+        }
         return true;
+    },
+    checkShip: function () {
+
     },
     checkEnd: function () {
 
@@ -377,11 +488,13 @@ Galaxian.prototype = {
     // },
     crashed: function (obj, opts) {
         if (obj instanceof Self) {
-            obj.isAlive = false;
-            obj.explosion();
+            this.life -= 1;
+            obj.explosion(obj.ctx, this.image["explosion1"], this.image["explosion2"], this.image["explosion3"], this.image["explosion4"]);
         } else if (obj instanceof Enemy) {
             obj.delete();
-            this.enemy[opts.i] = this.enemy[opts.i].filter(item => item.isDelete !== true);
+            !!opts ? this.enemy[opts.i] = this.enemy[opts.i].filter(item => item.isDelete !== true) : null;
+            this._enemy = this._enemy.filter(item => item.isDelete !== true);
+            this.out_enemy = this.out_enemy.filter(item => item.isDelete !== true);
         }
     },
     // sort: function (obj) {
@@ -432,8 +545,8 @@ function DrawAble() {
         if (obj.info.color)
             ctx.fillStyle = obj.info.color;
         !!obj.info.image ? ctx.drawImage(
-                obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
-            ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
+            obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
+        ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
         ctx.restore();
     };
     this.move = function (obj, xOffset, yOffset) {
@@ -496,7 +609,10 @@ function SpaceShip() {
                 this.completeAnimate = true;
             }
         }
-    }
+    };
+    // this.animate = function (path) {
+    //
+    // }
 }
 
 SpaceShip.prototype = new DrawAble();
@@ -521,8 +637,6 @@ function Self() {
     this.explosion = function (ctx, ex1, ex2, ex3, ex4) {
         //测试
         this.isAlive = false;
-        this.info.prev.x = this.info.x;
-        this.info.prev.y = this.info.y;
 
         this.swapImage(ex1);
         this.render(ctx, this);
@@ -530,23 +644,21 @@ function Self() {
         setTimeout(function () {
             this.swapImage(ex2);
             this.render(ctx, this);
-        }.bind(this), 100);
-
-        setTimeout(function () {
-            this.swapImage(ex3);
-            this.render(ctx, this);
-        }.bind(this), 100);
-
-        setTimeout(function () {
-            this.swapImage(ex4);
-            this.render(ctx, this);
-        }.bind(this), 100);
-
-        //@Test
-        setTimeout(function () {
-            this.info.width = 0;
-            this.info.height = 0;
-            this.render(ctx, this);
+            setTimeout(function () {
+                this.swapImage(ex3);
+                this.render(ctx, this);
+                setTimeout(function () {
+                    this.swapImage(ex4);
+                    this.render(ctx, this);
+                    //@Test
+                    setTimeout(function () {
+                        // this.info.prev.x = this.info.x;
+                        // this.info.prev.y = this.info.y;
+                        this.swapImage(null);
+                        this.render(ctx, this);
+                    }.bind(this), 100);
+                }.bind(this), 100);
+            }.bind(this), 100);
         }.bind(this), 100);
     };
     this.swapImage = function (image) {
