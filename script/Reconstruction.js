@@ -297,8 +297,8 @@ Galaxian.prototype = {
         //@TODO 需要优化!!!
         let that = this, leave_cycle = getRandom(5000) + 7000, enemy = that.enemy;
         this.timer.randomLeave = setInterval(function () {
-            if (that.self.isAlive) {
-                let obj, random = getRandom(2), path = [];
+            if (that.self.isAlive && that.isAnimateComplete) {
+                let obj, random = 1, path = [];
                 //enemy = enemy.filter(item => item.length !== 0);
                 if (random === 1) {
                     let temp = enemy.filter(item => item.length !== 0);
@@ -312,12 +312,22 @@ Galaxian.prototype = {
                     for (let i = 0; i < 1; i += 0.01) {
                         path.push(getBezierPoint(i, obj.info.x, obj.info.y, that.self.info.x, that.canvas.height + 20, obj.info.x - obj.info.width * 5, obj.info.y + obj.info.height));
                     }
-                    let n = 0;
+                    let n = 0, r = 0;
                     leave();
+
                     function leave() {
                         if (path[n]) {
-                            if (that.checkBorder(obj,path[n].x - obj.info.x, path[n].y - obj.info.y)) {
-                                obj.move(obj,path[n].x - obj.info.x, path[n].y - obj.info.y);
+                            if (that.checkBorder(obj, path[n].x - obj.info.x, path[n].y - obj.info.y || that.checkShip(obj))) {
+                                obj.move(obj, path[n].x - obj.info.x, path[n].y - obj.info.y);
+                                if (r <= 360) {
+                                    obj.ctx.save();
+                                    obj.ctx.translate(obj.info.x + obj.info.width / 2, obj.info.y + obj.info.height / 2);
+                                    obj.ctx.rotate(r * Math.PI / 180);
+                                    obj.ctx.translate(-(obj.info.x + obj.info.width / 2), -(obj.info.y + obj.info.height / 2));
+                                    obj.render(obj.ctx, obj);
+                                    obj.ctx.restore();
+                                    r += 5;
+                                }
                                 n++;
                                 requestAnimationFrame(leave);
                             } else {
@@ -339,10 +349,11 @@ Galaxian.prototype = {
                     }
                     let n = 0;
                     leave();
+
                     function leave() {
                         if (path[n]) {
-                            if (that.checkBorder(obj,path[n].x - obj.info.x, path[n].y - obj.info.y)) {
-                                obj.move(obj,path[n].x - obj.info.x, path[n].y - obj.info.y);
+                            if (that.checkBorder(obj, path[n].x - obj.info.x, path[n].y - obj.info.y) && that.checkShip(obj)) {
+                                obj.move(obj, path[n].x - obj.info.x, path[n].y - obj.info.y);
                                 n++;
                                 requestAnimationFrame(leave);
                             } else {
@@ -395,7 +406,7 @@ Galaxian.prototype = {
                 if (!event.timer.selfShoot) {
                     event.timer.selfShoot = setInterval(function () {
                         if (self.isAlive && event.keyMap[90]) {
-                            if (new Date().valueOf() - that.cooldown.shootCooldown > 1) {
+                            if (new Date().valueOf() - that.cooldown.shootCooldown > 500) {
                                 let bullet = new Bullet();
                                 bullet.setInfo({
                                     x: Math.ceil(self.info.x + self.info.width / 2),
@@ -456,7 +467,7 @@ Galaxian.prototype = {
         let canvas = this.canvas, self = this.self, enemy = this.enemy;
         if (obj.info.x + Xoffset < 0 || obj.info.x + obj.info.width + Xoffset > canvas.width || obj.info.y + Yoffset < 0 || obj.info.y + Yoffset > canvas.height)
             return false;
-        if (obj.info.x >= self.info.x && obj.info.x <= self.info.x + self.info.width && obj.info.y + obj.info.height >= self.info.y && obj.info.y + obj.info.height <= self.info.y + self.info.height) {
+        if (obj.info.x >= self.info.x && obj.info.x <= self.info.x + self.info.width && obj.info.y + obj.info.height >= self.info.y && obj.info.y + obj.info.height <= self.info.y + self.info.height && this.self.isAlive) {
             this.crashed(self);
             return false;
         }
@@ -477,8 +488,12 @@ Galaxian.prototype = {
         }
         return true;
     },
-    checkShip: function () {
-
+    checkShip: function (obj) {
+        if (Math.ceil(obj.info.x + obj.info.width / 2) >= this.self.info.x && Math.ceil(obj.info.x + obj.info.width / 2) <= this.self.info.x + this.self.info.width && Math.ceil(obj.info.y + obj.info.height) >= this.self.info.y && Math.ceil(obj.info.y + obj.info.height) <= this.self.info.y + this.self.info.height) {
+            this.crashed(this.self);
+            return false;
+        }
+        return true;
     },
     checkEnd: function () {
 
@@ -637,6 +652,8 @@ function Self() {
     this.explosion = function (ctx, ex1, ex2, ex3, ex4) {
         //测试
         this.isAlive = false;
+        this.info.prev.x = this.info.x;
+        this.info.prev.y = this.info.y;
 
         this.swapImage(ex1);
         this.render(ctx, this);
@@ -654,7 +671,9 @@ function Self() {
                     setTimeout(function () {
                         // this.info.prev.x = this.info.x;
                         // this.info.prev.y = this.info.y;
-                        this.swapImage(null);
+                        this.ctx.clearRect(this.info.x, this.info.y, this.info.width, this.info.height);
+                        this.info.width = 0;
+                        this.info.height = 0;
                         this.render(ctx, this);
                     }.bind(this), 100);
                 }.bind(this), 100);
