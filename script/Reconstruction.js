@@ -66,7 +66,7 @@ Galaxian.prototype = {
          * randomMove: 随机移动
          * randomLeave: 进攻
          */
-        this.randomShoot();
+        //this.randomShoot();
         this.randomMove();
         this.randomLeave();
         this.loopArrow();
@@ -90,6 +90,7 @@ Galaxian.prototype = {
             width: 35,
             height: 35,
             speed: 5,
+            rotation: 0,
             prev: {
                 x: null,
                 y: null,
@@ -122,6 +123,7 @@ Galaxian.prototype = {
                         x: null,
                         y: null
                     },
+                    rotation: 0,
                     image: (function () {
                         if (template[i][j] === 0) {
                             return image["enemy1"];
@@ -316,18 +318,13 @@ Galaxian.prototype = {
                     leave();
 
                     function leave() {
-                        if (path[n]) {
-                            if (that.checkBorder(obj, path[n].x - obj.info.x, path[n].y - obj.info.y || that.checkShip(obj))) {
-                                obj.move(obj, path[n].x - obj.info.x, path[n].y - obj.info.y);
-                                if (r <= 360) {
-                                    obj.ctx.save();
-                                    obj.ctx.translate(obj.info.x + obj.info.width / 2, obj.info.y + obj.info.height / 2);
-                                    obj.ctx.rotate(r * Math.PI / 180);
-                                    obj.ctx.translate(-(obj.info.x + obj.info.width / 2), -(obj.info.y + obj.info.height / 2));
-                                    obj.render(obj.ctx, obj);
-                                    obj.ctx.restore();
+                        if (path[n] && !obj.isDelete) {
+                            if (that.checkBorder(obj, path[n].x - obj.info.x, path[n].y - obj.info.y) && that.checkShip(obj)) {
+                                if (r <= 180) {
                                     r += 5;
+                                    obj.info.rotation = r;
                                 }
+                                obj.move(obj, path[n].x - obj.info.x, path[n].y - obj.info.y);
                                 n++;
                                 requestAnimationFrame(leave);
                             } else {
@@ -489,7 +486,7 @@ Galaxian.prototype = {
         return true;
     },
     checkShip: function (obj) {
-        if (Math.ceil(obj.info.x + obj.info.width / 2) >= this.self.info.x && Math.ceil(obj.info.x + obj.info.width / 2) <= this.self.info.x + this.self.info.width && Math.ceil(obj.info.y + obj.info.height) >= this.self.info.y && Math.ceil(obj.info.y + obj.info.height) <= this.self.info.y + this.self.info.height) {
+        if (Math.ceil(obj.info.x + obj.info.width / 2) >= this.self.info.x && Math.ceil(obj.info.x + obj.info.width / 2) <= this.self.info.x + this.self.info.width && Math.ceil(obj.info.y + obj.info.height / 2) >= this.self.info.y && Math.ceil(obj.info.y + obj.info.height / 2) <= this.self.info.y + this.self.info.height) {
             this.crashed(this.self);
             return false;
         }
@@ -502,12 +499,18 @@ Galaxian.prototype = {
     //
     // },
     crashed: function (obj, opts) {
+        let that = this;
         if (obj instanceof Self) {
             this.life -= 1;
             obj.explosion(obj.ctx, this.image["explosion1"], this.image["explosion2"], this.image["explosion3"], this.image["explosion4"]);
         } else if (obj instanceof Enemy) {
             obj.delete();
-            !!opts ? this.enemy[opts.i] = this.enemy[opts.i].filter(item => item.isDelete !== true) : null;
+            !!opts ? this.enemy[opts.i] = this.enemy[opts.i].filter(item => item.isDelete !== true) : this.enemy = (function () {
+                    for (let i = 0; i < that.enemy.length; i++) {
+                        that.enemy[i] = that.enemy[i].filter(item => item.isDelete !== true);
+                    }
+                    return that.enemy;
+                })();
             this._enemy = this._enemy.filter(item => item.isDelete !== true);
             this.out_enemy = this.out_enemy.filter(item => item.isDelete !== true);
         }
@@ -559,9 +562,13 @@ function DrawAble() {
         ctx.save();
         if (obj.info.color)
             ctx.fillStyle = obj.info.color;
+        ctx.translate(Math.ceil(obj.info.x + obj.info.width / 2), Math.ceil(obj.info.y + obj.info.height / 2));
+        ctx.rotate(obj.info.rotation * Math.PI / 180);
+        ctx.clearRect(-(Math.ceil(obj.info.width / 2)) - 10, -(Math.ceil(obj.info.height / 2)) - 10, obj.info.width + 20, obj.info.height + 20);
+        ctx.translate(-Math.ceil(obj.info.x + obj.info.width / 2), -Math.ceil(obj.info.y + obj.info.height / 2));
         !!obj.info.image ? ctx.drawImage(
-            obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
-        ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
+                obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
+            ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
         ctx.restore();
     };
     this.move = function (obj, xOffset, yOffset) {
@@ -573,7 +580,7 @@ function DrawAble() {
     };
     this.isDelete = false;
     this.delete = function () {
-        this.ctx.clearRect(this.info.x, this.info.y, this.info.width, this.info.height);
+        this.ctx.clearRect(this.info.x - 10, this.info.y - 10, this.info.width + 20, this.info.height + 20);
         this.isDelete = true;
         this.info.x = -1000;
         this.info.y = -1000;
@@ -592,6 +599,7 @@ function SpaceShip() {
             x: null,
             y: null
         },
+        rotation: null,
         image: null,
     };
     this.setInfo = function (info) {
