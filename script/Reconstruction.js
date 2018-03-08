@@ -66,7 +66,7 @@ Galaxian.prototype = {
          * randomMove: 随机移动
          * randomLeave: 进攻
          */
-        //this.randomShoot();
+        this.randomShoot();
         this.randomMove();
         this.randomLeave();
         this.loopArrow();
@@ -143,7 +143,7 @@ Galaxian.prototype = {
                 //enemyShip.info.speed = enemyShip.type + 1;
                 enemyShip.setCtx(this.ctx);
                 enemyShip.status = 1;
-                enemyShip.initAnimate(enemyShip.info.x, enemyShip.info.y, enemyShip.info.x, endY - j * opts.shipHeight - j * opts.shipMargin, {direction: 2});
+                enemyShip.initAnimate(enemyShip.info.x, enemyShip.info.y, enemyShip.info.x, endY - j * opts.shipHeight - j * opts.shipMargin + 100, {direction: 2});
                 enemy[i][j] = enemyShip;
             }
         }
@@ -192,7 +192,17 @@ Galaxian.prototype = {
                         }
                     }
                     if (bullet.type === 3) {
-
+                        let distance;
+                        if (bullet.info.x > that.self.info.x) {
+                            distance = -((bullet.info.x - bullet.track.x) / (1000 / 60) / 4);
+                        } else {
+                            distance = (bullet.track.x - bullet.info.x) / (1000 / 60) / 4;
+                        }
+                        if (!that.checkArrow(bullet, distance, bullet.info.speed)) {
+                            that.arrow[i].delete();
+                        } else {
+                            bullet.move(bullet, distance, bullet.info.speed);
+                        }
                     }
                     bullet.render(that.ctx, bullet);
                     that.arrow = that.arrow.filter(item => item.isDelete !== true);
@@ -213,7 +223,10 @@ Galaxian.prototype = {
                 if (direction === 1) {
                     function getResult() {
                         for (let i = 0; i < that._enemy.length; i++) {
-                            if (!that.checkBorder(that._enemy[i], -that._enemy[i].info.speed, 0)) {
+                            if (!that.checkBorder(that._enemy[i], -that._enemy[i].info.speed, 0, {
+                                    wScale: 0.75,
+                                    hScale: 1
+                                })) {
                                 return false;
                             }
                         }
@@ -230,7 +243,10 @@ Galaxian.prototype = {
                 } else {
                     function getResult() {
                         for (let i = 0; i < that._enemy.length; i++) {
-                            if (!that.checkBorder(that._enemy[i], that._enemy[i].info.speed, 0)) {
+                            if (!that.checkBorder(that._enemy[i], that._enemy[i].info.speed, 0, {
+                                    wScale: 0.75,
+                                    hScale: 1
+                                })) {
                                 return false;
                             }
                         }
@@ -276,7 +292,7 @@ Galaxian.prototype = {
                         y: null,
                         width: 3,
                         height: 15,
-                        speed: 4,
+                        speed: 20,
                         prev: {
                             x: null,
                             y: null,
@@ -300,7 +316,7 @@ Galaxian.prototype = {
         let that = this, leave_cycle = getRandom(5000) + 7000, enemy = that.enemy;
         this.timer.randomLeave = setInterval(function () {
             if (that.self.isAlive && that.isAnimateComplete) {
-                let obj, random = 1, path = [];
+                let obj, random = getRandom(2), path = [];
                 //enemy = enemy.filter(item => item.length !== 0);
                 if (random === 1) {
                     let temp = enemy.filter(item => item.length !== 0);
@@ -311,18 +327,64 @@ Galaxian.prototype = {
                     enemy[0] = enemy[0].filter(item => item !== null);
                     that._enemy = that._enemy.filter(item => item.status !== 2);
                     that.out_enemy.push(obj);
-                    for (let i = 0; i < 1; i += 0.01) {
-                        path.push(getBezierPoint(i, obj.info.x, obj.info.y, that.self.info.x, that.canvas.height + 20, obj.info.x - obj.info.width * 5, obj.info.y + obj.info.height));
+                    let n = 0, r = 0, _default;
+                    if (obj.type === 1) {
+                        _default = 160;
+                    } else if (obj.type === 2) {
+                        _default = 140;
+                    } else if (obj.type === 3) {
+                        _default = 120;
+                    } else {
+                        _default = 100;
                     }
-                    let n = 0, r = 0;
+
+                    for (let i = 0; i < 1; i += _default / 100 / 100 / 2) {
+                        path.push(getBezierPoint(i, obj.info.x, obj.info.y, that.self.info.x, that.canvas.height + 20, obj.info.x - obj.info.width * 7, obj.info.y + obj.info.height));
+                    }
                     leave();
 
                     function leave() {
                         if (path[n] && !obj.isDelete) {
                             if (that.checkBorder(obj, path[n].x - obj.info.x, path[n].y - obj.info.y) && that.checkShip(obj)) {
                                 if (r <= 180) {
-                                    r += 5;
+                                    r += 10;
                                     obj.info.rotation = r;
+                                }
+                                if (n === Math.ceil(path.length / 2)) {
+                                    let bullet = new Bullet();
+                                    bullet.setInfo({
+                                        x: Math.ceil(obj.info.x + obj.info.width / 2),
+                                        y: null,
+                                        width: 3,
+                                        height: 15,
+                                        speed: (function () {
+                                            if (obj.type === 1) {
+                                                return 30;
+                                            } else if (obj.type === 2) {
+                                                return 31;
+                                            } else if (obj.type === 3) {
+                                                return 32;
+                                            } else {
+                                                return 33;
+                                            }
+                                        })(),
+                                        prev: {
+                                            x: null,
+                                            y: null,
+                                        }
+                                    });
+                                    bullet.info.y = obj.info.y + obj.info.height + bullet.info.height;
+                                    bullet.info.color = "red";
+                                    bullet.info.prev.x = bullet.info.x;
+                                    bullet.info.prev.y = bullet.info.y;
+                                    bullet.type = 3;
+                                    bullet.track = {
+                                        x: that.self.info.x,
+                                        y: that.self.info.y
+                                    };
+                                    bullet.setCtx(that.ctx);
+
+                                    that.arrow.push(bullet);
                                 }
                                 obj.move(obj, path[n].x - obj.info.x, path[n].y - obj.info.y);
                                 n++;
@@ -341,15 +403,64 @@ Galaxian.prototype = {
                     enemy[enemy.length - 1] = enemy[enemy.length - 1].filter(item => item !== null);
                     that._enemy = that._enemy.filter(item => item.status !== 2);
                     that.out_enemy.push(obj);
-                    for (let i = 0; i < 1; i += 0.01) {
-                        path.push(getBezierPoint(i, obj.info.x, obj.info.y, that.self.info.x, that.canvas.height + 20, obj.info.x + obj.info.width * 5, obj.info.y + obj.info.height));
+                    let n = 0, r = 0, _default;
+                    if (obj.type === 1) {
+                        _default = 160;
+                    } else if (obj.type === 2) {
+                        _default = 140;
+                    } else if (obj.type === 3) {
+                        _default = 120;
+                    } else {
+                        _default = 100;
                     }
-                    let n = 0;
+                    for (let i = 0; i < 1; i += _default / 100 / 100 / 2) {
+                        path.push(getBezierPoint(i, obj.info.x, obj.info.y, that.self.info.x, that.canvas.height + 20, obj.info.x + obj.info.width * 7, obj.info.y + obj.info.height));
+                    }
                     leave();
 
                     function leave() {
-                        if (path[n]) {
+                        if (path[n] && !obj.isDelete) {
                             if (that.checkBorder(obj, path[n].x - obj.info.x, path[n].y - obj.info.y) && that.checkShip(obj)) {
+                                if (r <= 180) {
+                                    obj.info.rotation = r;
+                                    r += 5;
+                                }
+                                if (n === Math.ceil(path.length / 2)) {
+                                    let bullet = new Bullet();
+                                    bullet.setInfo({
+                                        x: Math.ceil(obj.info.x + obj.info.width / 2),
+                                        y: null,
+                                        width: 3,
+                                        height: 15,
+                                        speed: (function () {
+                                            if (obj.type === 1) {
+                                                return 30;
+                                            } else if (obj.type === 2) {
+                                                return 31;
+                                            } else if (obj.type === 3) {
+                                                return 32;
+                                            } else {
+                                                return 33;
+                                            }
+                                        })(),
+                                        prev: {
+                                            x: null,
+                                            y: null,
+                                        }
+                                    });
+                                    bullet.info.y = obj.info.y + obj.info.height + bullet.info.height * 2;
+                                    bullet.info.color = "red";
+                                    bullet.info.prev.x = bullet.info.x;
+                                    bullet.info.prev.y = bullet.info.y;
+                                    bullet.type = 3;
+                                    bullet.track = {
+                                        x: that.self.info.x,
+                                        y: that.self.info.y
+                                    };
+                                    bullet.setCtx(that.ctx);
+
+                                    that.arrow.push(bullet);
+                                }
                                 obj.move(obj, path[n].x - obj.info.x, path[n].y - obj.info.y);
                                 n++;
                                 requestAnimationFrame(leave);
@@ -403,14 +514,14 @@ Galaxian.prototype = {
                 if (!event.timer.selfShoot) {
                     event.timer.selfShoot = setInterval(function () {
                         if (self.isAlive && event.keyMap[90]) {
-                            if (new Date().valueOf() - that.cooldown.shootCooldown > 500) {
+                            if (new Date().valueOf() - that.cooldown.shootCooldown > 250) {
                                 let bullet = new Bullet();
                                 bullet.setInfo({
                                     x: Math.ceil(self.info.x + self.info.width / 2),
                                     y: null,
                                     width: 3,
                                     height: 15,
-                                    speed: 5,
+                                    speed: 20,
                                     prev: {
                                         x: null,
                                         y: null,
@@ -431,7 +542,7 @@ Galaxian.prototype = {
                     }, 1000 / 60);
                 }
             }
-            if (!self.isAlive && e.keyCode && this.life >= 0) {
+            if (!self.isAlive && e.keyCode === (37 || 39 || 90) && this.life >= 0) {
                 this.initSelf();
             }
         }
@@ -454,8 +565,12 @@ Galaxian.prototype = {
             event.timer.selfShoot = 0;
         }
     },
-    checkBorder: function (obj, Xoffset, Yoffset) {
-        if (obj.info.x + Xoffset < 0 || obj.info.x + Xoffset + obj.info.width > this.canvas.width || obj.info.y + Yoffset < 0 || obj.info.y + Yoffset > this.canvas.height)
+    checkBorder: function (obj, Xoffset, Yoffset, opts) {
+        let canvas = this.canvas;
+        if (obj.info.x + Xoffset < (!!opts ? canvas.width * (1 - opts.wScale) / 2 : 0) ||
+            obj.info.x + Xoffset + obj.info.width > (!!opts ? canvas.width - canvas.width * (1 - opts.wScale) / 2 : canvas.width) ||
+            obj.info.y + Yoffset < 0 ||
+            obj.info.y + Yoffset > canvas.height)
             return false;
         return true;
     },
@@ -506,11 +621,11 @@ Galaxian.prototype = {
         } else if (obj instanceof Enemy) {
             obj.delete();
             !!opts ? this.enemy[opts.i] = this.enemy[opts.i].filter(item => item.isDelete !== true) : this.enemy = (function () {
-                    for (let i = 0; i < that.enemy.length; i++) {
-                        that.enemy[i] = that.enemy[i].filter(item => item.isDelete !== true);
-                    }
-                    return that.enemy;
-                })();
+                for (let i = 0; i < that.enemy.length; i++) {
+                    that.enemy[i] = that.enemy[i].filter(item => item.isDelete !== true);
+                }
+                return that.enemy;
+            })();
             this._enemy = this._enemy.filter(item => item.isDelete !== true);
             this.out_enemy = this.out_enemy.filter(item => item.isDelete !== true);
         }
@@ -558,17 +673,17 @@ function DrawAble() {
         this.ctx = ctx;
     };
     this.render = function (ctx, obj) {
-        ctx.clearRect(obj.info.prev.x, obj.info.prev.y, obj.info.width, obj.info.height);
+        ctx.clearRect(obj.info.prev.x - 5, obj.info.prev.y - 5, obj.info.width + 10, obj.info.height + 10);
         ctx.save();
         if (obj.info.color)
             ctx.fillStyle = obj.info.color;
         ctx.translate(Math.ceil(obj.info.x + obj.info.width / 2), Math.ceil(obj.info.y + obj.info.height / 2));
         ctx.rotate(obj.info.rotation * Math.PI / 180);
-        ctx.clearRect(-(Math.ceil(obj.info.width / 2)) - 10, -(Math.ceil(obj.info.height / 2)) - 10, obj.info.width + 20, obj.info.height + 20);
+        //ctx.clearRect(-(Math.ceil(obj.info.width / 2)) - 12, -(Math.ceil(obj.info.height / 2)) - 12, obj.info.width + 24, obj.info.height + 24);
         ctx.translate(-Math.ceil(obj.info.x + obj.info.width / 2), -Math.ceil(obj.info.y + obj.info.height / 2));
         !!obj.info.image ? ctx.drawImage(
-                obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
-            ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
+            obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
+        ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
         ctx.restore();
     };
     this.move = function (obj, xOffset, yOffset) {
@@ -721,6 +836,10 @@ function Bullet() {
      */
     this.type = null;
     this.info.color = null;
+    this.track = {
+        x: null,
+        y: null
+    };
 }
 
 Bullet.prototype = new Entity();
@@ -739,4 +858,4 @@ function Event() {
 }
 
 let game = new Galaxian(document.querySelector("canvas"));
-game.inital();
+//game.inital();
