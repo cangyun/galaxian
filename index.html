@@ -41,34 +41,68 @@
             right: 0;
             transform: translateY(-50%);
             z-index: 999;
-
             margin: 0 auto;
-            width: 40%;
+            width: 20%;
             opacity: 0.8;
         }
 
-        .row {
-            width: 100%;
+        .start > .row {
             display: flex;
             flex-direction: column;
             justify-content: space-around;
         }
 
-        .row > input {
+        .start > .row > input {
             text-align: center;
             color: gray;
             font-size: 12px;
             padding: 1em;
         }
 
-        .row > input::placeholder {
+        .start > .row > input::placeholder {
             text-align: center;
         }
 
-        .row > #startBTN {
+        .start > .row > #error {
+            padding: 0.5em;
+            background-color: red;
+            text-align: center;
+            display: none;
+            font-size: 14px;
+            font-style: italic;
+        }
+
+        .start > .row > #startBTN {
             padding: 1em;
         }
 
+        .info {
+            position: absolute;
+            z-index: 999;
+            top: 0;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            width: 20%;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            display: none;
+        }
+        .info > div {
+            display: flex;
+            flex-wrap: nowrap;
+            text-align: center;
+            justify-content: space-around;
+        }
+        .info > div:nth-child(2) {
+            width: 60%;
+            margin: 0 auto;
+        }
+        .info p {
+            margin: 0 auto;
+        }
     </style>
 </head>
 <body>
@@ -77,13 +111,54 @@
     <div class="start">
         <div class="row">
             <img src="images/start_logo.png" alt="">
+            <div id="error">
+                <span></span>
+            </div>
             <input type="text" placeholder="please enter your name:" id="userName">
             <button id="startBTN">START</button>
+        </div>
+    </div>
+    <div class="info">
+        <div>
+            <p>name:<span>aaa</span></p>
+        </div>
+        <div>
+            <img src="images/life.png" alt="">
+            <img src="images/life.png" alt="">
+            <img src="images/life.png" alt="">
+        </div>
+        <div>
+            <p>time:</p>
         </div>
     </div>
     <canvas id="galaxian" width="1920" height="1080"></canvas>
 </div>
 </body>
 <script src="script/Reconstruction.js"></script>
+<script>
+    function validate(name) {
+        if (name.length < 3) {
+            showError($("#error"), "name length is not enough");
+            return false;
+        } else if (name.length > 20) {
+            showError($("#error"), "name length need more than 20");
+            return false;
+        }
+        return true;
+    }
+    function showError(ele, msg) {
+        ele.css("display", "block");
+        ele.find("span").text(msg);
+    }
+    $("#startBTN")[0].onclick = function (e) {
+        let name = $("#userName").val();
+        if (validate(name)) {
+            $(".gray").css("display", "none");
+            $(".start").css("display", "none");
+            $(".info").css("display", "block");
+            game.inital();
+        }
+    }
+</script>
 <!--<script src="script/galaxian.js"></script>-->
 </html>
