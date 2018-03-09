@@ -84,6 +84,7 @@ Galaxian.prototype = {
         }
     },
     initSelf: function () {
+        this.life -= 1;
         this.self = new Self();
         this.self.setInfo({
             x: this.canvas.width / 2,
@@ -538,7 +539,7 @@ Galaxian.prototype = {
                                         y: null,
                                     }
                                 });
-                                //-5是用来进行偏移的
+                                //-10是用来进行偏移的
                                 bullet.info.y = self.info.y - bullet.info.height - 10;
                                 bullet.info.color = "white";
                                 bullet.info.prev.x = bullet.info.x;
@@ -553,7 +554,7 @@ Galaxian.prototype = {
                     }, 1000 / 60);
                 }
             }
-            if (!self.isAlive && e.keyCode === (37 || 39 || 90) && this.life >= 0) {
+            if (!self.isAlive && e.keyCode === (37 || 39 || 90) && this.life > 0) {
                 this.initSelf();
             }
         }
@@ -618,8 +619,11 @@ Galaxian.prototype = {
         }
         return true;
     },
-    checkEnd: function () {
-
+    checkEnd: function (status) {
+        /*
+         * 1: 撞机
+         * 2: 被子弹击落
+         */
     },
     // clearObj: function (obj) {
     //
@@ -627,10 +631,12 @@ Galaxian.prototype = {
     crashed: function (obj, opts) {
         let that = this;
         if (obj instanceof Self) {
-            this.life -= 1;
+            //this.life -= 1;
             obj.explosion(obj.ctx, this.image["explosion1"], this.image["explosion2"], this.image["explosion3"], this.image["explosion4"]);
+            this.checkEnd();
         } else if (obj instanceof Enemy) {
             obj.delete();
+            this.checkEnd();
             !!opts ? this.enemy[opts.i] = this.enemy[opts.i].filter(item => item.isDelete !== true) : this.enemy = (function () {
                 for (let i = 0; i < that.enemy.length; i++) {
                     that.enemy[i] = that.enemy[i].filter(item => item.isDelete !== true);
