@@ -60,6 +60,7 @@ Galaxian.prototype = {
         this.initTemple({default: true});
         this.initSelf();
         this.initEnemy({shipMargin: 20, shipWidth: 25, shipHeight: 25, startY: 5});
+        this.initName();
         /*主计时器,目前计划有四个
          * arrow: 子弹
          * randomShoot: 随机发射
@@ -151,6 +152,16 @@ Galaxian.prototype = {
         this.enemy = enemy;
         this._enemy = this.enemyToArray();
         this.out_enemy = [];
+    },
+    initName: function () {
+        this.name = (function () {
+            let name = $("#userName").val();
+            return {
+                getName: function () {
+                    return name;
+                }
+            }
+        })()
     },
     enemyToArray: function () {
         let enemy = this.enemy, newArr = [];
@@ -849,11 +860,13 @@ function Event() {
         37: false,
         39: false,
         90: false,
+        32: false
     };
     this.timer = {
         selfLeft: null,
         selfRight: null,
         selfShoot: null,
+        GodShoot: null,
     };
 }
 

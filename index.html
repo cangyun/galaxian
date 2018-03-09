@@ -5,6 +5,10 @@
     <title>Title</title>
     <script src="script/jquery-2.1.1.js"></script>
     <style>
+        * {
+            transition: all 500ms;
+        }
+
         body {
             margin: 0;
         }
@@ -42,7 +46,7 @@
             transform: translateY(-50%);
             z-index: 999;
             margin: 0 auto;
-            width: 20%;
+            width: 30%;
             opacity: 0.8;
         }
 
@@ -67,9 +71,9 @@
             padding: 0.5em;
             background-color: red;
             text-align: center;
-            display: none;
             font-size: 14px;
             font-style: italic;
+            visibility: hidden;
         }
 
         .start > .row > #startBTN {
@@ -79,29 +83,42 @@
         .info {
             position: absolute;
             z-index: 999;
-            top: 0;
             left: 0;
             right: 0;
-            margin: 0 auto;
-            width: 20%;
-            background-color: white;
+            margin: 10px auto;
             display: flex;
-            flex-direction: column;
             justify-content: space-around;
-            display: none;
+            visibility: hidden;
+            background-color: transparent;
         }
+
         .info > div {
             display: flex;
             flex-wrap: nowrap;
             text-align: center;
+            flex-direction: column;
             justify-content: space-around;
+            font-size: 17px;
         }
-        .info > div:nth-child(2) {
-            width: 60%;
-            margin: 0 auto;
+
+        .info > div > p {
+            color: #EC170F;
+            font-weight: bold;
+            margin: 0;
         }
-        .info p {
-            margin: 0 auto;
+
+        .info > div > b {
+            color: white;
+            font-size: 14px;
+        }
+
+        .info > div:nth-child(3) {
+            flex-direction: row;
+        }
+
+        .info > div:nth-child(3) > img {
+            display: block;
+            margin: 10px;
         }
     </style>
 </head>
@@ -120,21 +137,22 @@
     </div>
     <div class="info">
         <div>
-            <p>name:<span>aaa</span></p>
+            <p>NAME</p>
+            <b id="name"></b>
+        </div>
+        <div>
+            <p>TIME</p>
+            <b id="time"></b>
         </div>
         <div>
             <img src="images/life.png" alt="">
             <img src="images/life.png" alt="">
             <img src="images/life.png" alt="">
-        </div>
-        <div>
-            <p>time:</p>
         </div>
     </div>
     <canvas id="galaxian" width="1920" height="1080"></canvas>
 </div>
 </body>
-<script src="script/Reconstruction.js"></script>
 <script>
     function validate(name) {
         if (name.length < 3) {
@@ -146,19 +164,36 @@
         }
         return true;
     }
+
     function showError(ele, msg) {
         ele.css("display", "block");
         ele.find("span").text(msg);
     }
+
+    function startAction(name) {
+        $(".gray").css("display", "none");
+        $(".start").css("display", "none");
+        $(".info").css("visibility", "visible");
+        $("#name").text(name);
+        timer()
+    }
+
+    function timer() {
+        let seconds = 0;
+        setInterval(function () {
+            $("#time").text((Math.floor(seconds / 60) < 10 ? "0" + Math.floor(seconds / 60) : Math.floor(seconds / 60)) + " : " + (seconds % 60 < 10 ? "0" + seconds % 60 : seconds % 60));
+            seconds += 1;
+        }, 1000)
+    }
+
     $("#startBTN")[0].onclick = function (e) {
         let name = $("#userName").val();
         if (validate(name)) {
-            $(".gray").css("display", "none");
-            $(".start").css("display", "none");
-            $(".info").css("display", "block");
+            startAction(name);
             game.inital();
         }
     }
 </script>
+<script src="script/Reconstruction.js"></script>
 <!--<script src="script/galaxian.js"></script>-->
 </html>

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        * {
+            transition: all 300ms;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+        }
+
+        header {
+            position: relative;
+            width: 100%;
+            background-color: #0073EF;
+        }
+
+        header img {
+            margin: 0 auto;
+            display: block;
+        }
+
+        .container {
+            display: flex;
+            background-color: #ccc;
+        }
+
+        .container > .aside {
+            padding-left: 1em;
+            flex-basis: 20%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .container > .aside > .intro li {
+            font-size: 1em;
+        }
+
+        .container > .aside > .rank > .rank-list {
+            border: 1px #666 solid;
+            overflow: scroll;
+            height: 300px;
+            padding: 0;
+            width: 85%;
+            list-style-type: none;
+        }
+
+        .container > .game {
+            flex-basis: 80%;
+            position: relative;
+        }
+
+        .container > .game > .grey {
+            z-index: 1;
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            opacity: 0.5;
+        }
+
+        .container > .game > .start {
+            z-index: 2;
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            margin: 0 auto;
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container > .game > .start > #error {
+            background-color: red;
+            text-align: center;
+            padding: 0.5em 0;
+            display: none
+        }
+
+        .container > .game > .start > input {
+            text-align: center;
+            padding: 1em 0;
+        }
+
+        .container > .game > .start > input::placeholder {
+            text-align: center;
+        }
+
+        .container > .game > .start > #startBTN {
+            padding: 1em 0;
+        }
+
+        .container > .game > .info {
+            position: absolute;
+            z-index: 3;
+            left: 0;
+            right: 0;
+            margin: 10px auto;
+            display: flex;
+            justify-content: space-around;
+            visibility: hidden;
+            background-color: transparent;
+        }
+
+        .container > .game > .info > div {
+            display: flex;
+            flex-wrap: nowrap;
+            text-align: center;
+            flex-direction: column;
+            justify-content: space-around;
+            font-size: 17px;
+        }
+
+        .container > .game > .info p {
+            color: #EC170F;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .container > .game > .info b {
+            color: white;
+            font-size: 14px;
+        }
+
+        .info > div:nth-child(3) {
+            flex-direction: row !important;
+        }
+
+        .info > div:nth-child(3) > img {
+            display: block;
+            margin: 10px;
+        }
+
+        .container > .game > canvas {
+            width: 100%;
+            height: 100%;
+            background: url("images/background.png");
+        }
+
+        footer {
+            padding: 1em 0;
+            background-color: rgba(30, 30, 30, 0.97);
+            text-align: center;
+            color: white;
+        }
+    </style>
+    <script src="script/jquery-2.1.1.js"></script>
+</head>
+<body>
+<header>
+    <img src="images/start_logo.png" alt="">
+</header>
+<div class="container">
+    <div class="aside">
+        <div class="intro">
+            <h2>Instructions</h2>
+            <p>Instructions of game:</p>
+            <ul>
+                <li>Left Arrow move to left</li>
+                <li>Right Arrow move to right</li>
+                <li>Z shoot</li>
+                <li>you have 3 life</li>
+            </ul>
+        </div>
+        <div class="rank">
+            <h2>Rank table</h2>
+            <ul class="rank-list"></ul>
+        </div>
+    </div>
+    <div class="game">
+        <div class="grey"></div>
+        <div class="info">
+            <div>
+                <p>NAME</p>
+                <b id="name"></b>
+            </div>
+            <div>
+                <p>TIME</p>
+                <b id="time"></b>
+            </div>
+            <div>
+                <img src="images/life.png" alt="">
+                <img src="images/life.png" alt="">
+                <img src="images/life.png" alt="">
+            </div>
+        </div>
+        <div class="start">
+            <div id="error">
+                <span></span>
+            </div>
+            <input type="text" placeholder="please enter your name(length >= 3 and <= 20)" id="userName">
+            <button id="startBTN">START</button>
+        </div>
+        <canvas id="galaxian" width="1920" height="1080"></canvas>
+    </div>
+</div>
+<footer>
+    <p>©Galaxian</p>
+</footer>
+</body>
+<script>
+    function validate(name) {
+        if (name.length < 3) {
+            showError($("#error"), "name length is not enough");
+            return false;
+        } else if (name.length > 20) {
+            showError($("#error"), "name length need more than 20");
+            return false;
+        }
+        return true;
+    }
+
+    function showError(ele, msg) {
+        ele.css("display", "block");
+        ele.find("span").text(msg);
+    }
+
+    function startAction(name) {
+        $(".grey").css("display", "none");
+        $(".start").css("display", "none");
+        $(".info").css("visibility", "visible");
+        $("#name").text(name);
+        timer()
+    }
+
+    function timer() {
+        let seconds = 0;
+        setInterval(function () {
+            $("#time").text((Math.floor(seconds / 60) < 10 ? "0" + Math.floor(seconds / 60) : Math.floor(seconds / 60)) + " : " + (seconds % 60 < 10 ? "0" + seconds % 60 : seconds % 60));
+            seconds += 1;
+        }, 1000)
+    }
+
+    $("#startBTN")[0].onclick = function () {
+        let name = $("#userName").val();
+        if (validate(name)) {
+            startAction(name);
+            game.inital();
+        }
+    }
+</script>
+<script src="script/Reconstruction.js"></script>
+</html>
