@@ -741,6 +741,30 @@ function cloneObj(obj) {
     return newobj;
 }
 
+//play
+let showFps = (function () {
+    let last = performance.now(),fps = 0,offset,frame = 0;
+    function go() {
+        //时间差
+        offset = performance.now() - last;
+        frame += 1;
+        //说明已经超出一秒了
+        if (offset >= 1000) {
+            last = performance.now();
+            fps = frame;
+            frame = 0;
+        }
+        requestAnimationFrame(go);
+    }
+    function getFps() {
+        return fps;
+    }
+    return {
+        go: go,
+        getFps: getFps,
+    }
+})();
+
 function DrawAble() {
     this.ctx = null;
     this.setCtx = function (ctx) {
