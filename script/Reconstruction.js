@@ -171,6 +171,7 @@ Galaxian.prototype = {
         })()
     },
     enemyToArray: function () {
+        //返回一个enemy数组的一维数组
         let enemy = this.enemy, newArr = [];
         for (let i = 0; i < enemy.length; i++) {
             for (let j = 0; j < enemy[i].length; j++) {
@@ -185,6 +186,7 @@ Galaxian.prototype = {
         this._enemy.forEach(item => item.render(this.ctx, item));
     },
     loopArrow: function () {
+        //定时渲染子弹
         let that = this;
         this.timer.arrow = requestAnimationFrame(loop);
 
@@ -193,6 +195,12 @@ Galaxian.prototype = {
             if (arrow.length > 0) {
                 for (let i = 0; i < arrow.length; i++) {
                     let bullet = arrow[i];
+                    /*
+                     type: 子弹方向
+                     1 up
+                     2 down
+                     3 track
+                     */
                     if (bullet.type === 1) {
                         if (!that.checkArrow(bullet, 0, -bullet.info.speed)) {
                             //that.clearObj(bullet);
@@ -209,6 +217,7 @@ Galaxian.prototype = {
                             bullet.move(bullet, 0, bullet.info.speed);
                         }
                     }
+                    //跟踪只会选取一个坐标，并不断向这个坐标前进
                     if (bullet.type === 3) {
                         let distance;
                         if (bullet.info.x > that.self.info.x) {
@@ -234,14 +243,19 @@ Galaxian.prototype = {
         let that = this, result = true;
 
         this.timer.randomMove = requestAnimationFrame(move);
+        /*
+         * @direction
+         * @1: 向左移动
+         * @2: 向右移动
+         */
         let direction = 1;
 
         function move() {
-            //direction 1:left 2:right
             if (checkAnimate()) {
                 if (direction === 1) {
                     function getResult() {
                         for (let i = 0; i < that._enemy.length; i++) {
+                            //wScale限制移动范围
                             if (!that.checkBorder(that._enemy[i], -that._enemy[i].info.speed, 0, {
                                     wScale: 0.75,
                                     hScale: 1
@@ -284,7 +298,9 @@ Galaxian.prototype = {
             requestAnimationFrame(move);
         }
 
+        //检查初始化动画是否进行完，放在这里是因为随机移动是第一个开始进行的计时器
         function checkAnimate() {
+            //循环数组，在动画进行完后对象的completeAnimate属性将会被设置成true
             for (let i = 0; i < that._enemy.length; i++) {
                 if (!that._enemy[i].completeAnimate) {
                     return false;
@@ -301,6 +317,7 @@ Galaxian.prototype = {
             if (new Date().valueOf() - that.cooldown.selfShootCooldown > shoot_cycle && that.self.isAlive && that.isAnimateComplete) {
                 let random_index = [], arr = that.enemy.filter(item => item.length !== 0);
 
+                //随机选取几个前排，然后发射
                 for (let i = 0; i < getRandom(3) + 2; i++) {
                     random_index.push(getRandom(arr.length - 1));
                 }
@@ -337,7 +354,9 @@ Galaxian.prototype = {
             if (that.self.isAlive && that.isAnimateComplete) {
                 let obj, random = getRandom(2), path = [];
                 //enemy = enemy.filter(item => item.length !== 0);
+                //此处的if else两边都差不多
                 if (random === 1) {
+                    //从enemy中取出一个对象，并且删除它
                     let temp = enemy.filter(item => item.length !== 0);
                     obj = temp[0][temp[0].length - 1];
                     temp[0][temp[0].length - 1].status = 2;
@@ -345,8 +364,10 @@ Galaxian.prototype = {
                     enemy[0][enemy[0].length - 1] = null;
                     enemy[0] = enemy[0].filter(item => item !== null);
                     that._enemy = that._enemy.filter(item => item.status !== 2);
+                    //将删除的对象移入到out_enemy中
                     that.out_enemy.push(obj);
                     let n = 0, r = 0, _default;
+                    //根据敌机类型制作曲线，敌机越强，则曲线长度越短，运动的就越快
                     if (obj.type === 1) {
                         _default = 160;
                     } else if (obj.type === 2) {
@@ -357,6 +378,7 @@ Galaxian.prototype = {
                         _default = 100;
                     }
 
+                    //获取贝塞尔曲线的点
                     for (let i = 0; i < 1; i += _default / 100 / 100 / 2) {
                         path.push(getBezierPoint(i, obj.info.x, obj.info.y, that.self.info.x, that.canvas.height + 20, obj.info.x - obj.info.width * 7, obj.info.y + obj.info.height));
                     }
@@ -366,6 +388,7 @@ Galaxian.prototype = {
                         if (path[n] && !obj.isDelete) {
                             if (that.checkBorder(obj, path[n].x - obj.info.x, path[n].y - obj.info.y) && that.checkShip(obj)) {
                                 if (r <= 180) {
+                                    //开始改变角度
                                     r += 10;
                                     obj.info.rotation = r;
                                 }
@@ -397,6 +420,7 @@ Galaxian.prototype = {
                                     bullet.info.prev.x = bullet.info.x;
                                     bullet.info.prev.y = bullet.info.y;
                                     bullet.type = 3;
+                                    //设置跟踪坐标
                                     bullet.track = {
                                         x: that.self.info.x,
                                         y: that.self.info.y
@@ -500,9 +524,11 @@ Galaxian.prototype = {
     keyDown: function (e) {
         e.preventDefault();
         let event = this.event, self = this.self, that = this;
+        //映射keyCode
         if (e.keyCode in event.keyMap) {
             event.keyMap[e.keyCode] = true;
         }
+        //如果初始化动画还未结束，则不能移动
         if (this.isAnimateComplete) {
             if (event.keyMap[37]) {
                 if (!event.timer.selfLeft) {
@@ -559,6 +585,7 @@ Galaxian.prototype = {
                                     that.arrow.push(bullet);
                                     that.cooldown.shootCooldown = new Date().valueOf();
                                 } else {
+                                    //GOD FATHER，无敌模式
                                     for (let i = 0; i < 5; i++) {
                                         let bullet = new Bullet();
                                         bullet.setInfo({
@@ -595,6 +622,7 @@ Galaxian.prototype = {
     },
     keyUp: function (e) {
         let event = this.event;
+        //解除keyCode映射
         if (e.keyCode in event.keyMap) {
             event.keyMap[e.keyCode] = false;
         }
@@ -623,12 +651,15 @@ Galaxian.prototype = {
     //检查子弹有无越界,或击中目标
     checkArrow: function (obj, Xoffset, Yoffset) {
         let canvas = this.canvas, self = this.self, enemy = this.enemy;
+        //是否越界
         if (obj.info.x + Xoffset < 0 || obj.info.x + obj.info.width + Xoffset > canvas.width || obj.info.y + Yoffset < 0 || obj.info.y + Yoffset > canvas.height)
             return false;
+        //击中子机
         if (obj.info.x >= self.info.x && obj.info.x <= self.info.x + self.info.width && obj.info.y + obj.info.height >= self.info.y && obj.info.y + obj.info.height <= self.info.y + self.info.height && this.self.isAlive) {
             this.crashed(self, {status: 2});
             return false;
         }
+        //检测是否击中敌机
         for (let i = 0; i < enemy.length; i++) {
             for (let j = 0; j < enemy[i].length; j++) {
                 if (obj.info.x >= this.enemy[i][j].info.x && obj.info.x <= this.enemy[i][j].info.x + this.enemy[i][j].info.width && obj.info.y >= this.enemy[i][j].info.y && obj.info.y <= this.enemy[i][j].info.y + this.enemy[i][j].info.height) {
@@ -637,6 +668,7 @@ Galaxian.prototype = {
                 }
             }
         }
+        //在外部移动的敌机不在enemy数组中，而是在外部的out_enemy的数组中，此处检查的是out_enemy数组
         for (let i = 0; i < this.out_enemy.length; i++) {
             let enemy = this.out_enemy[i];
             if (obj.info.x >= enemy.info.x && obj.info.x <= enemy.info.x + enemy.info.width && obj.info.y >= enemy.info.y && obj.info.y <= enemy.info.y + enemy.info.height) {
@@ -741,7 +773,7 @@ function cloneObj(obj) {
     return newobj;
 }
 
-//play
+//@test 显示帧率
 let showFps = (function () {
     let last = performance.now(),fps = 0,offset,frame = 0;
     function go() {
@@ -765,23 +797,34 @@ let showFps = (function () {
     }
 })();
 
+//基类
 function DrawAble() {
     this.ctx = null;
     this.setCtx = function (ctx) {
         this.ctx = ctx;
     };
     this.render = function (ctx, obj) {
+        //-5是由于旋转有bug...
         ctx.clearRect(obj.info.prev.x - 5, obj.info.prev.y - 5, obj.info.width + 10, obj.info.height + 10);
+
         ctx.save();
+
+        //设置目标颜色
         if (obj.info.color)
             ctx.fillStyle = obj.info.color;
+        //转移绘图原点
         ctx.translate(Math.ceil(obj.info.x + obj.info.width / 2), Math.ceil(obj.info.y + obj.info.height / 2));
+        //在目标中心旋转
         ctx.rotate(obj.info.rotation * Math.PI / 180);
         //ctx.clearRect(-(Math.ceil(obj.info.width / 2)) - 12, -(Math.ceil(obj.info.height / 2)) - 12, obj.info.width + 24, obj.info.height + 24);
         ctx.translate(-Math.ceil(obj.info.x + obj.info.width / 2), -Math.ceil(obj.info.y + obj.info.height / 2));
+        //在转换回来
+
+        //先检测目标有没有image，如果没有，则直接绘制他的宽高，颜色在前面有设置
         !!obj.info.image ? ctx.drawImage(
             obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
         ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
+
         ctx.restore();
     };
     this.move = function (obj, xOffset, yOffset) {
@@ -800,6 +843,7 @@ function DrawAble() {
     }
 }
 
+//所有的飞船届继承自此对象
 function SpaceShip() {
     this.isAlive = true;
     this.info = {
@@ -853,6 +897,7 @@ function SpaceShip() {
 
 SpaceShip.prototype = new DrawAble();
 
+//敌机对象
 function Enemy() {
     this.type = null;
     this.setType = function (type) {
@@ -869,9 +914,10 @@ function Enemy() {
 
 Enemy.prototype = new SpaceShip();
 
+//自机对象
 function Self() {
     this.explosion = function (ctx, ex1, ex2, ex3, ex4) {
-        //测试
+        //自机的爆炸函数
         this.isAlive = false;
         this.info.prev.x = this.info.x;
         this.info.prev.y = this.info.y;
@@ -879,6 +925,7 @@ function Self() {
         this.swapImage(ex1);
         this.render(ctx, this);
 
+        //回调函数=-=？
         setTimeout(function () {
             this.swapImage(ex2);
             this.render(ctx, this);
@@ -908,6 +955,7 @@ function Self() {
 
 Self.prototype = new SpaceShip();
 
+//实体对象
 function Entity() {
     this.info = {
         x: null,
@@ -928,7 +976,9 @@ function Entity() {
 Entity.prototype = new DrawAble();
 
 function Bullet() {
-    /*@type: 1 up
+    /*
+     type: 子弹方向
+     1 up
      2 down
      3 track
      */
