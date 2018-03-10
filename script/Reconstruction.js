@@ -1,5 +1,6 @@
 /**
  * Created by pc on 2018/3/5.
+ * TODO: 优化,从执行过程入手,再细化整个结构
  */
 function Galaxian(canvas) {
     this.canvas = canvas;
@@ -77,6 +78,7 @@ Galaxian.prototype = {
         this.bindEvent();
     },
     initTemple: function (opts) {
+        //舰队模板
         if (opts.default === true || !opts.over) {
             this.template = [[0, 0, 0], [0, 0, 0, 1], [0, 0, 0, 1, 2], [0, 0, 0, 1, 2, 3], [0, 0, 0, 1, 2], [0, 0, 0, 1, 2], [0, 0, 0, 1, 2, 3], [0, 0, 0, 1, 2], [0, 0, 0, 1], [0, 0, 0]];
         } else {
@@ -84,7 +86,11 @@ Galaxian.prototype = {
         }
     },
     initSelf: function () {
+        //初始化时残计-1
         this.life -= 1;
+        //引用外部函数,渲染剩余残机
+        showLife(3 - this.life);
+
         this.self = new Self();
         this.self.setInfo({
             x: this.canvas.width / 2,
@@ -102,15 +108,15 @@ Galaxian.prototype = {
         this.self.info.prev.x = this.self.info.x;
         this.self.info.prev.y = this.self.info.y;
         this.self.setCtx(this.ctx);
+        //执行初始动画
         this.self.initAnimate(this.self.info.x, this.self.info.y, this.self.info.x, this.self.info.y - this.self.info.height, {direction: 1});
     },
     initEnemy: function (opts) {
-        let template = this.template;
-        let enemy = [];
-        let image = this.image;
-        let startX = this.canvas.width / 2 - (opts.shipWidth * template.length / 2) - (opts.shipMargin * template.length / 2),
+        let template = this.template, enemy = [], image = this.image,
+            startX = this.canvas.width / 2 - (opts.shipWidth * template.length / 2) - (opts.shipMargin * template.length / 2),
             endY = opts.startY + cloneObj(template).sort()[template.length - 1].length * (opts.shipHeight + opts.shipMargin),
             startY = -cloneObj(template).sort()[template.length - 1].length * (opts.shipHeight + opts.shipMargin);
+        //按照模板初始化
         for (let i = 0; i < template.length; i++) {
             enemy[i] = [];
             for (let j = 0; j < template[i].length; j++) {
@@ -180,17 +186,17 @@ Galaxian.prototype = {
     },
     loopArrow: function () {
         let that = this;
-        //放在内部避免循环失效
         this.timer.arrow = requestAnimationFrame(loop);
 
         function loop() {
-            if (that.arrow.length > 0) {
-                for (let i = 0; i < that.arrow.length; i++) {
-                    let bullet = that.arrow[i];
+            let arrow = that.arrow;
+            if (arrow.length > 0) {
+                for (let i = 0; i < arrow.length; i++) {
+                    let bullet = arrow[i];
                     if (bullet.type === 1) {
                         if (!that.checkArrow(bullet, 0, -bullet.info.speed)) {
                             //that.clearObj(bullet);
-                            that.arrow[i].delete();
+                            bullet.delete();
                         } else {
                             bullet.move(bullet, 0, -bullet.info.speed);
                         }
@@ -198,7 +204,7 @@ Galaxian.prototype = {
                     if (bullet.type === 2) {
                         if (!that.checkArrow(bullet, 0, bullet.info.speed)) {
                             //that.clearObj(bullet);
-                            that.arrow[i].delete();
+                            bullet.delete();
                         } else {
                             bullet.move(bullet, 0, bullet.info.speed);
                         }
@@ -217,6 +223,7 @@ Galaxian.prototype = {
                         }
                     }
                     bullet.render(that.ctx, bullet);
+                    //过滤已经被标记为删除的子弹
                     that.arrow = that.arrow.filter(item => item.isDelete !== true);
                 }
             }
@@ -491,6 +498,7 @@ Galaxian.prototype = {
         document.onkeyup = this.keyUp.bind(this);
     },
     keyDown: function (e) {
+        e.preventDefault();
         let event = this.event, self = this.self, that = this;
         if (e.keyCode in event.keyMap) {
             event.keyMap[e.keyCode] = true;
@@ -527,34 +535,60 @@ Galaxian.prototype = {
                     event.timer.selfShoot = setInterval(function () {
                         if (self.isAlive && event.keyMap[90]) {
                             if (new Date().valueOf() - that.cooldown.shootCooldown > 250) {
-                                let bullet = new Bullet();
-                                bullet.setInfo({
-                                    x: Math.ceil(self.info.x + self.info.width / 2),
-                                    y: null,
-                                    width: 3,
-                                    height: 15,
-                                    speed: 20,
-                                    prev: {
-                                        x: null,
+                                if (that.name.getName() !== "GOD FATHER") {
+                                    let bullet = new Bullet();
+                                    bullet.setInfo({
+                                        x: Math.ceil(self.info.x + self.info.width / 2),
                                         y: null,
-                                    }
-                                });
-                                //-10是用来进行偏移的
-                                bullet.info.y = self.info.y - bullet.info.height - 10;
-                                bullet.info.color = "white";
-                                bullet.info.prev.x = bullet.info.x;
-                                bullet.info.prev.y = bullet.info.y;
-                                bullet.type = 1;
-                                bullet.setCtx(that.ctx);
+                                        width: 3,
+                                        height: 15,
+                                        speed: 20,
+                                        prev: {
+                                            x: null,
+                                            y: null,
+                                        }
+                                    });
+                                    //-10是用来进行偏移的
+                                    bullet.info.y = self.info.y - bullet.info.height - 10;
+                                    bullet.info.color = "white";
+                                    bullet.info.prev.x = bullet.info.x;
+                                    bullet.info.prev.y = bullet.info.y;
+                                    bullet.type = 1;
+                                    bullet.setCtx(that.ctx);
 
-                                that.arrow.push(bullet);
-                                that.cooldown.shootCooldown = new Date().valueOf();
+                                    that.arrow.push(bullet);
+                                    that.cooldown.shootCooldown = new Date().valueOf();
+                                } else {
+                                    for (let i = 0; i < 5; i++) {
+                                        let bullet = new Bullet();
+                                        bullet.setInfo({
+                                            x: Math.ceil(self.info.x + i * 5),
+                                            y: null,
+                                            width: 3,
+                                            height: 15,
+                                            speed: 20,
+                                            prev: {
+                                                x: null,
+                                                y: null
+                                            }
+                                        });
+                                        bullet.info.y = self.info.y - bullet.info.height - 10;
+                                        bullet.info.color = "white";
+                                        bullet.info.prev.x = bullet.info.x;
+                                        bullet.info.prev.y = bullet.info.y;
+                                        bullet.type = 1;
+                                        bullet.setCtx(that.ctx);
+
+                                        that.arrow.push(bullet);
+                                        that.cooldown.shootCooldown = new Date().valueOf();
+                                    }
+                                }
                             }
                         }
                     }, 1000 / 60);
                 }
             }
-            if (!self.isAlive && e.keyCode === (37 || 39 || 90) && this.life > 0) {
+            if (!self.isAlive && [37,39,90].includes(e.keyCode) && this.life > 0) {
                 this.initSelf();
             }
         }
@@ -592,7 +626,7 @@ Galaxian.prototype = {
         if (obj.info.x + Xoffset < 0 || obj.info.x + obj.info.width + Xoffset > canvas.width || obj.info.y + Yoffset < 0 || obj.info.y + Yoffset > canvas.height)
             return false;
         if (obj.info.x >= self.info.x && obj.info.x <= self.info.x + self.info.width && obj.info.y + obj.info.height >= self.info.y && obj.info.y + obj.info.height <= self.info.y + self.info.height && this.self.isAlive) {
-            this.crashed(self);
+            this.crashed(self, {status: 2});
             return false;
         }
         for (let i = 0; i < enemy.length; i++) {
@@ -614,7 +648,7 @@ Galaxian.prototype = {
     },
     checkShip: function (obj) {
         if (Math.ceil(obj.info.x + obj.info.width / 2) >= this.self.info.x && Math.ceil(obj.info.x + obj.info.width / 2) <= this.self.info.x + this.self.info.width && Math.ceil(obj.info.y + obj.info.height / 2) >= this.self.info.y && Math.ceil(obj.info.y + obj.info.height / 2) <= this.self.info.y + this.self.info.height) {
-            this.crashed(this.self);
+            this.crashed(this.self, {status: 1});
             return false;
         }
         return true;
@@ -624,6 +658,19 @@ Galaxian.prototype = {
          * 1: 撞机
          * 2: 被子弹击落
          */
+
+        //玩家还剩最后一条命,同归于尽
+        if (status === 1 && this.life === 0 && this._enemy.length === 0 && this.out_enemy.length) {
+            this.endAction(0);
+        }
+        //残机用完
+        if (!this.self.isAlive && this.life === 0) {
+            this.endAction(0);
+        }
+        //胜利
+        if (this.self.isAlive && !this._enemy.length && !this.out_enemy.length) {
+            this.endAction(1);
+        }
     },
     // clearObj: function (obj) {
     //
@@ -633,10 +680,9 @@ Galaxian.prototype = {
         if (obj instanceof Self) {
             //this.life -= 1;
             obj.explosion(obj.ctx, this.image["explosion1"], this.image["explosion2"], this.image["explosion3"], this.image["explosion4"]);
-            this.checkEnd();
+            this.checkEnd(opts.status);
         } else if (obj instanceof Enemy) {
             obj.delete();
-            this.checkEnd();
             !!opts ? this.enemy[opts.i] = this.enemy[opts.i].filter(item => item.isDelete !== true) : this.enemy = (function () {
                 for (let i = 0; i < that.enemy.length; i++) {
                     that.enemy[i] = that.enemy[i].filter(item => item.isDelete !== true);
@@ -645,11 +691,22 @@ Galaxian.prototype = {
             })();
             this._enemy = this._enemy.filter(item => item.isDelete !== true);
             this.out_enemy = this.out_enemy.filter(item => item.isDelete !== true);
+            this.checkEnd();
         }
     },
     // sort: function (obj) {
     //     obj = obj.filter(item => item.isDelete !== true);
     // },
+    endAction: function (result) {
+        if (result) {
+            clearInterval(this.timer.randomShoot);
+            clearInterval(this.timer.randomLeave);
+            cancelAnimationFrame(this.timer.randomMove);
+            alert("win");
+        } else {
+            alert("lose");
+        }
+    },
     constructor: Galaxian
 };
 

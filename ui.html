@@ -5,6 +5,7 @@
     <title>Title</title>
     <style>
         * {
+            box-sizing: border-box;
             transition: all 300ms;
         }
 
@@ -31,8 +32,8 @@
         }
 
         .container > .aside {
+            width: 20%;
             padding-left: 1em;
-            flex-basis: 20%;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -52,7 +53,7 @@
         }
 
         .container > .game {
-            flex-basis: 80%;
+            width: 80%;
             position: relative;
         }
 
@@ -198,13 +199,14 @@
             <input type="text" placeholder="please enter your name(length >= 3 and <= 20)" id="userName">
             <button id="startBTN">START</button>
         </div>
-        <canvas id="galaxian" width="1920" height="1080"></canvas>
+        <canvas id="galaxian" width="1800" height="900"></canvas>
     </div>
 </div>
 <footer>
     <p>©Galaxian</p>
 </footer>
 </body>
+<script src="script/Reconstruction.js"></script>
 <script>
     function validate(name) {
         if (name.length < 3) {
@@ -223,11 +225,21 @@
     }
 
     function startAction(name) {
+        $(".aside").css({"width": "0%","padding-left": 0});
+        $(".game").css("width", "100%");
+        $("html").animate({scrollTop: $(".game").offset().top}, "slow");
+
         $(".grey").css("display", "none");
         $(".start").css("display", "none");
         $(".info").css("visibility", "visible");
         $("#name").text(name);
-        timer()
+        timer();
+    }
+
+    function showLife(num) {
+        for (let i = 0; i < num; i++) {
+            $(".game img").eq(i).hide();
+        }
     }
 
     function timer() {
@@ -246,5 +258,4 @@
         }
     }
 </script>
-<script src="script/Reconstruction.js"></script>
 </html>
