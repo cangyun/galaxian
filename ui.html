@@ -41,6 +41,7 @@
 
         .container > .aside > .intro li {
             font-size: 1em;
+            line-height: 2em;
         }
 
         .container > .aside > .rank > .rank-list {
@@ -143,6 +144,7 @@
             width: 100%;
             height: 100%;
             background: url("images/background.png");
+            background-size: cover;
         }
 
         footer {
@@ -164,16 +166,19 @@
             <h2>Instructions</h2>
             <p>Instructions of game:</p>
             <ul>
-                <li>Left Arrow move to left</li>
-                <li>Right Arrow move to right</li>
+                <li>Left Arrow move left</li>
+                <li>Right Arrow move right</li>
                 <li>Z shoot</li>
                 <li>you have 3 life</li>
+                <li>dodge the bullets</li>
+                <li>Green < Purple < Red < Yellow</li>
+                <li>if you use GOD FATHER as your name,some interesting things will happen</li>
             </ul>
         </div>
-        <div class="rank">
-            <h2>Rank table</h2>
-            <ul class="rank-list"></ul>
-        </div>
+        <!--<div class="rank">-->
+            <!--<h2>Rank table</h2>-->
+            <!--<ul class="rank-list"></ul>-->
+        <!--</div>-->
     </div>
     <div class="game">
         <div class="grey"></div>
@@ -199,7 +204,7 @@
             <input type="text" placeholder="please enter your name(length >= 3 and <= 20)" id="userName">
             <button id="startBTN">START</button>
         </div>
-        <canvas id="galaxian" width="1800" height="900"></canvas>
+        <canvas id="galaxian" width="1920" height="1080"></canvas>
     </div>
 </div>
 <footer>
@@ -208,6 +213,23 @@
 </body>
 <script src="script/Reconstruction.js"></script>
 <script>
+    let timer = (function () {
+        let seconds = 0,meter;
+        function start() {
+            meter = setInterval(function () {
+                $("#time").text((Math.floor(seconds / 60) < 10 ? "0" + Math.floor(seconds / 60) : Math.floor(seconds / 60)) + " : " + (seconds % 60 < 10 ? "0" + seconds % 60 : seconds % 60));
+                seconds += 1;
+            },1000);
+        }
+        function stop() {
+            clearInterval(meter);
+        }
+        return {
+            start: start,
+            stop: stop,
+        }
+    })();
+
     function validate(name) {
         if (name.length < 3) {
             showError($("#error"), "name length is not enough");
@@ -225,7 +247,7 @@
     }
 
     function startAction(name) {
-        $(".aside").css({"width": "0%","padding-left": 0});
+        $(".aside").css({"width": "0%","padding-left": 0}).css("display","none");
         $(".game").css("width", "100%");
         $("html").animate({scrollTop: $(".game").offset().top}, "slow");
 
@@ -233,7 +255,7 @@
         $(".start").css("display", "none");
         $(".info").css("visibility", "visible");
         $("#name").text(name);
-        timer();
+        timer.start();
     }
 
     function showLife(num) {
@@ -242,12 +264,20 @@
         }
     }
 
-    function timer() {
-        let seconds = 0;
-        setInterval(function () {
-            $("#time").text((Math.floor(seconds / 60) < 10 ? "0" + Math.floor(seconds / 60) : Math.floor(seconds / 60)) + " : " + (seconds % 60 < 10 ? "0" + seconds % 60 : seconds % 60));
-            seconds += 1;
-        }, 1000)
+    // function timer() {
+    //     let seconds = 0;
+    //     setInterval(function () {
+    //         $("#time").text((Math.floor(seconds / 60) < 10 ? "0" + Math.floor(seconds / 60) : Math.floor(seconds / 60)) + " : " + (seconds % 60 < 10 ? "0" + seconds % 60 : seconds % 60));
+    //         seconds += 1;
+    //     }, 1000)
+    // }
+    
+    function end() {
+        timer.stop();
+    }
+
+    function uploadData(posit) {
+
     }
 
     $("#startBTN")[0].onclick = function () {

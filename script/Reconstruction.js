@@ -738,6 +738,7 @@ Galaxian.prototype = {
         } else {
             alert("lose");
         }
+        end();
     },
     constructor: Galaxian
 };
