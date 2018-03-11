@@ -20,6 +20,7 @@ function Galaxian(canvas) {
     };
     this.arrow = [];
     this.life = 3;
+    this.isEnd = false;
 }
 
 Galaxian.prototype = {
@@ -226,7 +227,7 @@ Galaxian.prototype = {
                             distance = (bullet.track.x - bullet.info.x) / (1000 / 60) / 4;
                         }
                         if (!that.checkArrow(bullet, distance, bullet.info.speed)) {
-                            that.arrow[i].delete();
+                            arrow[i].delete();
                         } else {
                             bullet.move(bullet, distance, bullet.info.speed);
                         }
@@ -314,7 +315,7 @@ Galaxian.prototype = {
         let that = this, shoot_cycle = getRandom(1000) + 500;
 
         this.timer.randomShoot = setInterval(function () {
-            if (new Date().valueOf() - that.cooldown.selfShootCooldown > shoot_cycle && that.self.isAlive && that.isAnimateComplete) {
+            if (new Date().valueOf() - that.cooldown.selfShootCooldown > shoot_cycle && that.self.isAlive && that.isAnimateComplete && !!that._enemy.length) {
                 let random_index = [], arr = that.enemy.filter(item => item.length !== 0);
 
                 //随机选取几个前排，然后发射
@@ -521,6 +522,10 @@ Galaxian.prototype = {
         document.onkeydown = this.keyDown.bind(this);
         document.onkeyup = this.keyUp.bind(this);
     },
+    unbindEvent: function () {
+        document.onkeydown = null;
+        document.onkeyup = null;
+    },
     keyDown: function (e) {
         e.preventDefault();
         let event = this.event, self = this.self, that = this;
@@ -615,7 +620,7 @@ Galaxian.prototype = {
                     }, 1000 / 60);
                 }
             }
-            if (!self.isAlive && [37,39,90].includes(e.keyCode) && this.life > 0) {
+            if (!self.isAlive && [37, 39, 90].includes(e.keyCode) && this.life > 0) {
                 this.initSelf();
             }
         }
@@ -627,16 +632,19 @@ Galaxian.prototype = {
             event.keyMap[e.keyCode] = false;
         }
         if (e.keyCode === 37) {
-            cancelAnimationFrame(event.timer.selfLeft);
-            event.timer.selfLeft = 0;
+            // cancelAnimationFrame(event.timer.selfLeft);
+            // event.timer.selfLeft = 0;
+            event.clearTimer("selfLeft");
         }
         if (e.keyCode === 39) {
-            cancelAnimationFrame(event.timer.selfRight);
-            event.timer.selfRight = 0;
+            // cancelAnimationFrame(event.timer.selfRight);
+            // event.timer.selfRight = 0;
+            event.clearTimer("selfRight");
         }
         if (e.keyCode === 90) {
-            cancelAnimationFrame(event.timer.selfShoot);
-            event.timer.selfShoot = 0;
+            // cancelAnimationFrame(event.timer.selfShoot);
+            // event.timer.selfShoot = 0;
+            event.clearTimer("selfShoot");
         }
     },
     checkBorder: function (obj, Xoffset, Yoffset, opts) {
@@ -704,9 +712,6 @@ Galaxian.prototype = {
             this.endAction(1);
         }
     },
-    // clearObj: function (obj) {
-    //
-    // },
     crashed: function (obj, opts) {
         let that = this;
         if (obj instanceof Self) {
@@ -716,29 +721,33 @@ Galaxian.prototype = {
         } else if (obj instanceof Enemy) {
             obj.delete();
             !!opts ? this.enemy[opts.i] = this.enemy[opts.i].filter(item => item.isDelete !== true) : this.enemy = (function () {
-                for (let i = 0; i < that.enemy.length; i++) {
-                    that.enemy[i] = that.enemy[i].filter(item => item.isDelete !== true);
-                }
-                return that.enemy;
-            })();
+                    for (let i = 0; i < that.enemy.length; i++) {
+                        that.enemy[i] = that.enemy[i].filter(item => item.isDelete !== true);
+                    }
+                    return that.enemy;
+                })();
             this._enemy = this._enemy.filter(item => item.isDelete !== true);
             this.out_enemy = this.out_enemy.filter(item => item.isDelete !== true);
             this.checkEnd();
         }
     },
-    // sort: function (obj) {
-    //     obj = obj.filter(item => item.isDelete !== true);
-    // },
     endAction: function (result) {
-        if (result) {
+        if (result && !this.isEnd) {
+            this.isEnd = true;
             clearInterval(this.timer.randomShoot);
             clearInterval(this.timer.randomLeave);
             cancelAnimationFrame(this.timer.randomMove);
-            alert("win");
-        } else {
-            alert("lose");
+            this.event.clear();
+            this.unbindEvent();
+        } else if (!result && !this.isEnd) {
+            this.isEnd = true;
+            clearInterval(this.timer.randomShoot);
+            clearInterval(this.timer.randomLeave);
+            cancelAnimationFrame(this.timer.randomMove);
+            this.event.clear();
+            this.unbindEvent();
         }
-        end();
+        end(result);
     },
     constructor: Galaxian
 };
@@ -776,7 +785,8 @@ function cloneObj(obj) {
 
 //@test 显示帧率
 let showFps = (function () {
-    let last = performance.now(),fps = 0,offset,frame = 0;
+    let last = performance.now(), fps = 0, offset, frame = 0;
+
     function go() {
         //时间差
         offset = performance.now() - last;
@@ -789,9 +799,11 @@ let showFps = (function () {
         }
         requestAnimationFrame(go);
     }
+
     function getFps() {
         return fps;
     }
+
     return {
         go: go,
         getFps: getFps,
@@ -823,8 +835,8 @@ function DrawAble() {
 
         //先检测目标有没有image，如果没有，则直接绘制他的宽高，颜色在前面有设置
         !!obj.info.image ? ctx.drawImage(
-            obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
-        ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
+                obj.info.image, 0, 0, obj.info.image.width, obj.info.image.height, obj.info.x, obj.info.y, obj.info.width, obj.info.height
+            ) : ctx.fillRect(obj.info.x, obj.info.y, obj.info.width, obj.info.height);
 
         ctx.restore();
     };
@@ -1004,8 +1016,17 @@ function Event() {
         selfLeft: null,
         selfRight: null,
         selfShoot: null,
-        GodShoot: null,
     };
+    this.clearTimer = function (timer) {
+        cancelAnimationFrame(this.timer[timer]);
+        this.timer[timer] = 0;
+    };
+    this.clear = function () {
+        for (let key in this.timer) {
+            cancelAnimationFrame(this.timer[key]);
+            this.timer[key] = 0;
+        }
+    }
 }
 
 let game = new Galaxian(document.querySelector("canvas"));

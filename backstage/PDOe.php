@@ -38,7 +38,7 @@ class PDOe
     {
         $state = $this->PDO->prepare($str);
         $state->execute();
-        return $state->fetchAll(PDO::FETCH_COLUMN);
+        return $state->fetchAll(PDO::FETCH_CLASS);
     }
 
     public function getError()

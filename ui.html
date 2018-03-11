@@ -147,6 +147,29 @@
             background-size: cover;
         }
 
+        .rank {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translateY(-50%);
+            transform: translateX(-50%);
+            margin: 0 auto;
+            z-index: 999;
+            background-color: #fff;
+        }
+
+        .rank td {
+            width: 33%;
+            border: 1px #000 solid;
+            border-collapse: collapse;
+            text-align: center;
+        }
+
+        .highlight {
+            background-color: yellow;
+        }
+
         footer {
             padding: 1em 0;
             background-color: rgba(30, 30, 30, 0.97);
@@ -176,8 +199,8 @@
             </ul>
         </div>
         <!--<div class="rank">-->
-            <!--<h2>Rank table</h2>-->
-            <!--<ul class="rank-list"></ul>-->
+        <!--<h2>Rank table</h2>-->
+        <!--<ul class="rank-list"></ul>-->
         <!--</div>-->
     </div>
     <div class="game">
@@ -197,6 +220,13 @@
                 <img src="images/life.png" alt="">
             </div>
         </div>
+        <table class="rank" cellspacing="0">
+            <tr>
+                <td>position</td>
+                <td>name</td>
+                <td>time</td>
+            </tr>
+        </table>
         <div class="start">
             <div id="error">
                 <span></span>
@@ -204,7 +234,7 @@
             <input type="text" placeholder="please enter your name(length >= 3 and <= 20)" id="userName">
             <button id="startBTN">START</button>
         </div>
-        <canvas id="galaxian" width="1920" height="1080"></canvas>
+        <canvas id="galaxian" width="1920" height="950"></canvas>
     </div>
 </div>
 <footer>
@@ -214,16 +244,19 @@
 <script src="script/Reconstruction.js"></script>
 <script>
     let timer = (function () {
-        let seconds = 0,meter;
+        let seconds = 0, meter;
+
         function start() {
             meter = setInterval(function () {
                 $("#time").text((Math.floor(seconds / 60) < 10 ? "0" + Math.floor(seconds / 60) : Math.floor(seconds / 60)) + " : " + (seconds % 60 < 10 ? "0" + seconds % 60 : seconds % 60));
                 seconds += 1;
-            },1000);
+            }, 1000);
         }
+
         function stop() {
             clearInterval(meter);
         }
+
         return {
             start: start,
             stop: stop,
@@ -247,7 +280,7 @@
     }
 
     function startAction(name) {
-        $(".aside").css({"width": "0%","padding-left": 0}).css("display","none");
+        $(".aside").css({"width": "0%", "padding-left": 0}).css("display", "none");
         $(".game").css("width", "100%");
         $("html").animate({scrollTop: $(".game").offset().top}, "slow");
 
@@ -271,13 +304,85 @@
     //         seconds += 1;
     //     }, 1000)
     // }
-    
-    function end() {
+
+    function end(result) {
+        $(".grey").css("display", "block");
         timer.stop();
+        uploadData(result, $("#name").text(), $("#time").text());
+        $(".rank").css("display", "block")
     }
 
-    function uploadData(posit) {
+    function uploadData(position, name, time) {
+//        let formData = new FormData();
+//        formData.append("position", position);
+//        formData.append("name", name);
+//        formData.append("time", time);
+        let data = {
+            position: position,
+            name: name,
+            time: time,
+        };
+        $.ajax(
+            {
+                type: "POST",
+                url: "backstage/uploaddata.php",
+                dataType: "json",
+                data: data,
+                success: function (result) {
+                    dealData(result);
+                },
+                error: function (xhr, status, error) {
+                    console.log(status);
+                }
+            }
+        )
+    }
 
+    function dealData(data) {
+        let lose = [], win = [];
+        data.forEach(function (item) {
+            if ((item.POSITION * 1)) {
+                win.push(item)
+            } else {
+                lose.push(item);
+            }
+        });
+        showData({
+            lose: lose,
+            win: win
+        });
+    }
+
+    function showData(data) {
+        let lose = data.lose,win = data.win, highlighted = false;
+        let compare = function (obj1, obj2) {
+            let [obj1seconds,obj2seconds] = [(obj1.TIME.split(":")[0]*1*60)+(obj1.TIME.split(":")[1]*1),(obj2.TIME.split(":")[0]*1*60)+(obj2.TIME.split(":")[1]*1)];
+            if (obj1seconds < obj2seconds) {
+                return -1;
+            } else if (obj1seconds > obj2seconds) {
+                return 1;
+            } else {
+                return 0;
+            }
+        };
+        win = win.sort(compare);
+
+        for (let i = 0; i < 10; i++) {
+            if (win[i]) {
+                let tr = $("<tr></tr>"),position = $("<td></td>"),name = $("<td></td>"),time = $("<td></td>"),result = !!(win[i].POSITION * 1) ? "win" : "lose";
+                position.text(result);
+                name.text(win[i].NAME);
+                time.text(win[i].TIME);
+                tr.append(position).append(name).append(time);
+                if (win[i].NAME = $("#name").text()) {
+                    tr.addClass("highlight");
+                    highlighted = true;
+                }
+                $(".rank tbody").append(tr);
+            } else {
+                break;
+            }
+        }
     }
 
     $("#startBTN")[0].onclick = function () {
